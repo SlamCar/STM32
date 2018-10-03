@@ -1,0 +1,4011 @@
+L 1 "..\DMP\mllite\ml_math_func.c"
+N/*
+N $License:
+N    Copyright (C) 2011-2012 InvenSense Corporation, All Rights Reserved.
+N    See included License.txt for License information.
+N $
+N */
+N
+N/*******************************************************************************
+N *
+N * $Id:$
+N *
+N ******************************************************************************/
+N
+N/**
+N *   @defgroup  ML_MATH_FUNC ml_math_func
+N *   @brief     Motion Library - Math Functions
+N *              Common math functions the Motion Library
+N *
+N *   @{
+N *       @file ml_math_func.c
+N *       @brief Math Functions.
+N */
+N
+N#include "mlmath.h"
+L 1 "..\DMP\driver\include\mlmath.h" 1
+N/*
+N $License:
+N    Copyright (C) 2011 InvenSense Corporation, All Rights Reserved.
+N $
+N */
+N/*******************************************************************************
+N *
+N * $Id: mlmath.h 5629 2011-06-11 03:13:08Z mcaramello $ 
+N * 
+N *******************************************************************************/
+N
+N#ifndef _ML_MATH_H_
+N#define	_ML_MATH_H_
+N
+N#ifndef MLMATH
+N// This define makes Microsoft pickup things like M_PI
+N#define _USE_MATH_DEFINES
+N#include <math.h>
+L 1 "F:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h" 1
+N/*
+N * math.h: ANSI 'C' (X3J11 Oct 88) library header, section 4.5
+N * Copyright (C) Codemist Ltd., 1988
+N * Copyright 1991-1998,2004-2006,2014 ARM Limited. All rights reserved
+N */
+N
+N/*
+N * RCS $Revision: 185525 $ Codemist 0.03
+N * Checkin $Date: 2014-05-29 12:44:48 +0100 (Thu, 29 May 2014) $
+N * Revising $Author: statham $
+N */
+N
+N/*
+N * Parts of this file are based upon fdlibm:
+N *
+N * ====================================================
+N * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+N *
+N * Developed at SunSoft, a Sun Microsystems, Inc. business.
+N * Permission to use, copy, modify, and distribute this
+N * software is freely granted, provided that this notice
+N * is preserved.
+N * ====================================================
+N */
+N
+N#ifndef __math_h
+N#define __math_h
+N#define __ARMCLIB_VERSION 5050106
+N
+N#if defined(__clang__) || (defined(__ARMCC_VERSION) && !defined(__STRICT_ANSI__))
+X#if 0L || (1L && !0L)
+N  /* armclang and non-strict armcc allow 'long long' in system headers */
+N  #define __LONGLONG long long
+N#else
+S  /* strict armcc has '__int64' */
+S  #define __LONGLONG __int64
+N#endif
+N
+N/*
+N * Some of these declarations are new in C99.  To access them in C++
+N * you can use -D__USE_C99_MATH (or -D__USE_C99_ALL).
+N */
+N#ifndef __USE_C99_MATH
+N  #if defined(__USE_C99_ALL) || (defined(__STDC_VERSION__) && 199901L <= __STDC_VERSION__)
+X  #if 0L || (1L && 199901L <= 199901L)
+N    #define __USE_C99_MATH 1
+N  #endif
+N#endif
+N
+N#define _ARMABI __declspec(__nothrow)
+N#ifdef __TARGET_ARCH_AARCH64
+S# define _ARMABI_SOFTFP __declspec(__nothrow)
+N#else
+N# define _ARMABI_SOFTFP __declspec(__nothrow) __attribute__((__pcs__("aapcs")))
+N# define __HAVE_LONGDOUBLE 1
+N#endif
+N#define _ARMABI_PURE __declspec(__nothrow) __attribute__((const))
+N#ifdef __FP_FENV_EXCEPTIONS
+S# define _ARMABI_FPEXCEPT _ARMABI
+N#else
+N# define _ARMABI_FPEXCEPT _ARMABI __attribute__((const))
+N#endif
+N
+N#ifdef __cplusplus
+S#define _ARMABI_INLINE inline
+S#define _ARMABI_INLINE_DEF inline
+S#elif defined __GNUC__ || defined _USE_STATIC_INLINE
+X#elif 0L || 0L
+S#define _ARMABI_INLINE static __inline
+S#define _ARMABI_INLINE_DEF static __inline
+N#elif (defined(__STDC_VERSION__) && 199901L <= __STDC_VERSION__)
+X#elif (1L && 199901L <= 199901L)
+N#define _ARMABI_INLINE inline
+N#define _ARMABI_INLINE_DEF static inline
+N#else
+S#define _ARMABI_INLINE __inline
+S#define _ARMABI_INLINE_DEF __inline
+N#endif
+N
+N#ifdef __TARGET_ARCH_AARCH64
+S#  define _SOFTFP
+N#else
+N#  define _SOFTFP __attribute__((__pcs__("aapcs")))
+N#endif
+N
+N   /*
+N    * If the compiler supports signalling nans as per N965 then it
+N    * will define __SUPPORT_SNAN__, in which case a user may define
+N    * _WANT_SNAN in order to obtain the nans function, as well as the
+N    * FP_NANS and FP_NANQ classification macros.
+N    */
+N#if defined(__SUPPORT_SNAN__) && defined(_WANT_SNAN)
+X#if 0L && 0L
+S#pragma import(__use_snan)
+N#endif
+N
+N/*
+N * Macros for our inline functions down below.
+N * unsigned& __FLT(float x) - returns the bit pattern of x
+N * unsigned& __HI(double x) - returns the bit pattern of the high part of x
+N *                            (high part has exponent & sign bit in it)
+N * unsigned& __LO(double x) - returns the bit pattern of the low part of x
+N *
+N * We can assign to __FLT, __HI, and __LO and the appropriate bits get set in
+N * the floating point variable used.
+N *
+N * __HI & __LO are affected by the endianness and the target FPU.
+N */
+N#define __FLT(x) (*(unsigned *)&(x))
+N#if defined(__ARM_BIG_ENDIAN) || defined(__BIG_ENDIAN)
+X#if 0L || 0L
+S#  define __LO(x) (*(1 + (unsigned *)&(x)))
+S#  define __HI(x) (*(unsigned *)&(x))
+N#else /* !defined(__ARM_BIG_ENDIAN) && !defined(__BIG_ENDIAN) */
+N#  define __HI(x) (*(1 + (unsigned *)&(x)))
+N#  define __LO(x) (*(unsigned *)&(x))
+N#endif /* !defined(__ARM_BIG_ENDIAN) && !defined(__BIG_ENDIAN) */
+N
+N#   ifndef __MATH_DECLS
+N#   define __MATH_DECLS
+N
+N
+N/*
+N * A set of functions that we don't actually want to put in the standard
+N * namespace ever.  These are all called by the C99 macros.  As they're
+N * not specified by any standard they can't belong in ::std::.  The
+N * macro #defines are below amongst the standard function declarations.
+N * We only include these if we actually need them later on
+N */
+N#if !defined(__STRICT_ANSI__) || defined(__USE_C99_MATH)
+X#if !0L || 1L
+N#   ifdef __cplusplus
+S      extern "C" {
+N#   endif /* __cplusplus */
+N
+Nextern _SOFTFP unsigned __ARM_dcmp4(double /*x*/, double /*y*/);
+Xextern __attribute__((__pcs__("aapcs"))) unsigned __ARM_dcmp4(double  , double  );
+Nextern _SOFTFP unsigned __ARM_fcmp4(float /*x*/, float /*y*/);
+Xextern __attribute__((__pcs__("aapcs"))) unsigned __ARM_fcmp4(float  , float  );
+N    /*
+N     * Compare x and y and return the CPSR in r0.  These means we can test for
+N     * result types with bit pattern matching.
+N     *
+N     * These are a copy of the declarations in rt_fp.h keep in sync.
+N     */
+N
+Nextern _ARMABI_SOFTFP int __ARM_fpclassifyf(float /*x*/);
+Xextern __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_fpclassifyf(float  );
+Nextern _ARMABI_SOFTFP int __ARM_fpclassify(double /*x*/);
+Xextern __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_fpclassify(double  );
+N    /* Classify x into NaN, infinite, normal, subnormal, zero */
+N    /* Used by fpclassify macro */
+N
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_isfinitef(float __x)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_isfinitef(float __x)
+N{
+N    return ((__FLT(__x) >> 23) & 0xff) != 0xff;
+X    return (((*(unsigned *)&(__x)) >> 23) & 0xff) != 0xff;
+N}
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_isfinite(double __x)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_isfinite(double __x)
+N{
+N    return ((__HI(__x) >> 20) & 0x7ff) != 0x7ff;
+X    return (((*(1 + (unsigned *)&(__x))) >> 20) & 0x7ff) != 0x7ff;
+N}
+N    /* Return 1 if __x is finite, 0 otherwise */
+N    /* Used by isfinite macro */
+N
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_isinff(float __x)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_isinff(float __x)
+N{
+N    return (__FLT(__x) << 1) == 0xff000000;
+X    return ((*(unsigned *)&(__x)) << 1) == 0xff000000;
+N}
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_isinf(double __x)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_isinf(double __x)
+N{
+N    return ((__HI(__x) << 1) == 0xffe00000) && (__LO(__x) == 0);
+X    return (((*(1 + (unsigned *)&(__x))) << 1) == 0xffe00000) && ((*(unsigned *)&(__x)) == 0);
+N}
+N    /* Return 1 if __x is infinite, 0 otherwise */
+N    /* Used by isinf macro */
+N
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_islessgreaterf(float __x, float __y)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_islessgreaterf(float __x, float __y)
+N{
+N    unsigned __f = __ARM_fcmp4(__x, __y) >> 28;
+N    return (__f == 8) || (__f == 2); /* Just N set or Just Z set */
+N}
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_islessgreater(double __x, double __y)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_islessgreater(double __x, double __y)
+N{
+N    unsigned __f = __ARM_dcmp4(__x, __y) >> 28;
+N    return (__f == 8) || (__f == 2); /* Just N set or Just Z set */
+N}
+N    /*
+N     * Compare __x and __y and return 1 if __x < __y or __x > __y, 0 otherwise
+N     * Used by islessgreater macro
+N     */
+N
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_isnanf(float __x)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_isnanf(float __x)
+N{
+N    return (0x7f800000 - (__FLT(__x) & 0x7fffffff)) >> 31;
+X    return (0x7f800000 - ((*(unsigned *)&(__x)) & 0x7fffffff)) >> 31;
+N}
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_isnan(double __x)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_isnan(double __x)
+N{
+N    unsigned __xf = __HI(__x) | ((__LO(__x) == 0) ? 0 : 1);
+X    unsigned __xf = (*(1 + (unsigned *)&(__x))) | (((*(unsigned *)&(__x)) == 0) ? 0 : 1);
+N    return (0x7ff00000 - (__xf & 0x7fffffff)) >> 31;
+N}
+N    /* Return 1 if __x is a NaN, 0 otherwise */
+N    /* Used by isnan macro */
+N
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_isnormalf(float __x)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_isnormalf(float __x)
+N{
+N    unsigned __xe = (__FLT(__x) >> 23) & 0xff;
+X    unsigned __xe = ((*(unsigned *)&(__x)) >> 23) & 0xff;
+N    return (__xe != 0xff) && (__xe != 0);
+N}
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_isnormal(double __x)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_isnormal(double __x)
+N{
+N    unsigned __xe = (__HI(__x) >> 20) & 0x7ff;
+X    unsigned __xe = ((*(1 + (unsigned *)&(__x))) >> 20) & 0x7ff;
+N    return (__xe != 0x7ff) && (__xe != 0);
+N}
+N    /* Return 1 if __x is a normalised number, 0 otherwise */
+N    /* used by isnormal macro */
+N
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_signbitf(float __x)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_signbitf(float __x)
+N{
+N    return __FLT(__x) >> 31;
+X    return (*(unsigned *)&(__x)) >> 31;
+N}
+N_ARMABI_INLINE_DEF _ARMABI_SOFTFP int __ARM_signbit(double __x)
+Xstatic inline __declspec(__nothrow) __attribute__((__pcs__("aapcs"))) int __ARM_signbit(double __x)
+N{
+N    return __HI(__x) >> 31;
+X    return (*(1 + (unsigned *)&(__x))) >> 31;
+N}
+N    /* Return signbit of __x */
+N    /* Used by signbit macro */
+N
+N#   ifdef __cplusplus
+S      } /* extern "C" */
+N#   endif /* __cplusplus */
+N#endif /* Strict ANSI */
+N
+N#   undef __CLIBNS
+N
+N#   ifdef __cplusplus
+S      namespace std {
+S#       define __CLIBNS ::std::
+S        extern "C" {
+N#   else
+N#       define __CLIBNS
+N#   endif  /* __cplusplus */
+N
+N
+N#ifndef __has_builtin
+N  #define __has_builtin(x) 0
+N#endif
+N
+N#if !defined(__STRICT_ANSI__) || defined(__USE_C99_MATH)
+X#if !0L || 1L
+N  /* C99 additions */
+N  typedef float float_t;
+N  typedef double double_t;
+N#if __has_builtin(__builtin_inf)
+X#if 0
+S#   define HUGE_VALF __builtin_inff()
+S#   define HUGE_VALL __builtin_infl()
+S#   define INFINITY __builtin_inff()
+S#   define NAN __builtin_nanf("")
+N# else
+N#   define HUGE_VALF ((float)__INFINITY__)
+N#   define HUGE_VALL ((long double)__INFINITY__)
+N#   define INFINITY ((float)__INFINITY__)
+N#   define NAN (__ESCAPE__(0f_7FC00000))
+N#endif
+N
+N#   define MATH_ERRNO 1
+N#   define MATH_ERREXCEPT 2
+Nextern const int math_errhandling;
+N#endif
+N#if __has_builtin(__builtin_inf)
+X#if 0
+S# define HUGE_VAL __builtin_inf()
+N#else
+N# define HUGE_VAL ((double)__INFINITY__)
+N#endif
+N
+Nextern _ARMABI double acos(double /*x*/);
+Xextern __declspec(__nothrow) double acos(double  );
+N   /* computes the principal value of the arc cosine of x */
+N   /* a domain error occurs for arguments not in the range -1 to 1 */
+N   /* Returns: the arc cosine in the range 0 to Pi. */
+Nextern _ARMABI double asin(double /*x*/);
+Xextern __declspec(__nothrow) double asin(double  );
+N   /* computes the principal value of the arc sine of x */
+N   /* a domain error occurs for arguments not in the range -1 to 1 */
+N   /* and -HUGE_VAL is returned. */
+N   /* Returns: the arc sine in the range -Pi/2 to Pi/2. */
+N
+Nextern _ARMABI_PURE double atan(double /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double atan(double  );
+N   /* computes the principal value of the arc tangent of x */
+N   /* Returns: the arc tangent in the range -Pi/2 to Pi/2. */
+N
+Nextern _ARMABI double atan2(double /*y*/, double /*x*/);
+Xextern __declspec(__nothrow) double atan2(double  , double  );
+N   /* computes the principal value of the arc tangent of y/x, using the */
+N   /* signs of both arguments to determine the quadrant of the return value */
+N   /* a domain error occurs if both args are zero, and -HUGE_VAL returned. */
+N   /* Returns: the arc tangent of y/x, in the range -Pi to Pi. */
+N
+Nextern _ARMABI double cos(double /*x*/);
+Xextern __declspec(__nothrow) double cos(double  );
+N   /* computes the cosine of x (measured in radians). A large magnitude */
+N   /* argument may yield a result with little or no significance. */
+N   /* a domain error occurs for infinite input (C 7.12.1 footnote 196). */
+N   /* Returns: the cosine value. */
+Nextern _ARMABI double sin(double /*x*/);
+Xextern __declspec(__nothrow) double sin(double  );
+N   /* computes the sine of x (measured in radians). A large magnitude */
+N   /* argument may yield a result with little or no significance. */
+N   /* a domain error occurs for infinite input (C 7.12.1 footnote 196). */
+N   /* Returns: the sine value. */
+N
+Nextern void __use_accurate_range_reduction(void);
+N   /* reference this to select the larger, slower, but more accurate */
+N   /* range reduction in sin, cos and tan */
+N
+Nextern _ARMABI double tan(double /*x*/);
+Xextern __declspec(__nothrow) double tan(double  );
+N   /* computes the tangent of x (measured in radians). A large magnitude */
+N   /* argument may yield a result with little or no significance */
+N   /* Returns: the tangent value. */
+N   /*          if range error; returns HUGE_VAL. */
+N
+Nextern _ARMABI double cosh(double /*x*/);
+Xextern __declspec(__nothrow) double cosh(double  );
+N   /* computes the hyperbolic cosine of x. A range error occurs if the */
+N   /* magnitude of x is too large. */
+N   /* Returns: the hyperbolic cosine value. */
+N   /*          if range error; returns HUGE_VAL. */
+Nextern _ARMABI double sinh(double /*x*/);
+Xextern __declspec(__nothrow) double sinh(double  );
+N   /* computes the hyperbolic sine of x. A range error occurs if the */
+N   /* magnitude of x is too large. */
+N   /* Returns: the hyperbolic sine value. */
+N   /*          if range error; returns -HUGE_VAL or HUGE_VAL depending */
+N   /*          on the sign of the argument */
+N
+Nextern _ARMABI_PURE double tanh(double /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double tanh(double  );
+N   /* computes the hyperbolic tangent of x. */
+N   /* Returns: the hyperbolic tangent value. */
+N
+Nextern _ARMABI double exp(double /*x*/);
+Xextern __declspec(__nothrow) double exp(double  );
+N   /* computes the exponential function of x. A range error occurs if the */
+N   /* magnitude of x is too large. */
+N   /* Returns: the exponential value. */
+N   /*          if underflow range error; 0 is returned. */
+N   /*          if overflow range error; HUGE_VAL is returned. */
+N
+Nextern _ARMABI double frexp(double /*value*/, int * /*exp*/) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) double frexp(double  , int *  ) __attribute__((__nonnull__(2)));
+N   /* breaks a floating-point number into a normalised fraction and an */
+N   /* integral power of 2. It stores the integer in the int object pointed */
+N   /* to by exp. */
+N   /* Returns: the value x, such that x is a double with magnitude in the */
+N   /* interval 0.5 to 1.0 or zero, and value equals x times 2 raised to the */
+N   /* power *exp. If value is zero, both parts of the result are zero. */
+N
+Nextern _ARMABI double ldexp(double /*x*/, int /*exp*/);
+Xextern __declspec(__nothrow) double ldexp(double  , int  );
+N   /* multiplies a floating-point number by an integral power of 2. */
+N   /* A range error may occur. */
+N   /* Returns: the value of x times 2 raised to the power of exp. */
+N   /*          if range error; HUGE_VAL is returned. */
+Nextern _ARMABI double log(double /*x*/);
+Xextern __declspec(__nothrow) double log(double  );
+N   /* computes the natural logarithm of x. A domain error occurs if the */
+N   /* argument is negative, and -HUGE_VAL is returned. A range error occurs */
+N   /* if the argument is zero. */
+N   /* Returns: the natural logarithm. */
+N   /*          if range error; -HUGE_VAL is returned. */
+Nextern _ARMABI double log10(double /*x*/);
+Xextern __declspec(__nothrow) double log10(double  );
+N   /* computes the base-ten logarithm of x. A domain error occurs if the */
+N   /* argument is negative. A range error occurs if the argument is zero. */
+N   /* Returns: the base-ten logarithm. */
+Nextern _ARMABI double modf(double /*value*/, double * /*iptr*/) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) double modf(double  , double *  ) __attribute__((__nonnull__(2)));
+N   /* breaks the argument value into integral and fraction parts, each of */
+N   /* which has the same sign as the argument. It stores the integral part */
+N   /* as a double in the object pointed to by iptr. */
+N   /* Returns: the signed fractional part of value. */
+N
+Nextern _ARMABI double pow(double /*x*/, double /*y*/);
+Xextern __declspec(__nothrow) double pow(double  , double  );
+N   /* computes x raised to the power of y. A domain error occurs if x is */
+N   /* zero and y is less than or equal to zero, or if x is negative and y */
+N   /* is not an integer, and -HUGE_VAL returned. A range error may occur. */
+N   /* Returns: the value of x raised to the power of y. */
+N   /*          if underflow range error; 0 is returned. */
+N   /*          if overflow range error; HUGE_VAL is returned. */
+Nextern _ARMABI double sqrt(double /*x*/);
+Xextern __declspec(__nothrow) double sqrt(double  );
+N   /* computes the non-negative square root of x. A domain error occurs */
+N   /* if the argument is negative, and -HUGE_VAL returned. */
+N   /* Returns: the value of the square root. */
+N
+N#if defined(__TARGET_FPU_VFP_DOUBLE) && !defined(__TARGET_FPU_SOFTVFP)
+X#if 1L && !0L
+N    _ARMABI_INLINE double _sqrt(double __x) { return __sqrt(__x); }
+X    inline double _sqrt(double __x) { return __sqrt(__x); }
+N#else
+S    _ARMABI_INLINE double _sqrt(double __x) { return sqrt(__x); }
+N#endif
+N#if defined(__TARGET_FPU_VFP_SINGLE) && !defined(__TARGET_FPU_SOFTVFP)
+X#if 1L && !0L
+N    _ARMABI_INLINE float _sqrtf(float __x) { return __sqrtf(__x); }
+X    inline float _sqrtf(float __x) { return __sqrtf(__x); }
+N#else
+S    _ARMABI_INLINE float _sqrtf(float __x) { return (float)sqrt(__x); }
+N#endif
+N    /* With VFP, _sqrt and _sqrtf should expand inline as the native VFP square root
+N     * instructions. They will not behave like the C sqrt() function, because
+N     * they will report unusual values as IEEE exceptions (in fpmodes which
+N     * support IEEE exceptions) rather than in errno. These function names
+N     * are not specified in any standard. */
+N
+Nextern _ARMABI_PURE double ceil(double /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double ceil(double  );
+N   /* computes the smallest integer not less than x. */
+N   /* Returns: the smallest integer not less than x, expressed as a double. */
+Nextern _ARMABI_PURE double fabs(double /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double fabs(double  );
+N   /* computes the absolute value of the floating-point number x. */
+N   /* Returns: the absolute value of x. */
+N
+Nextern _ARMABI_PURE double floor(double /*d*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double floor(double  );
+N   /* computes the largest integer not greater than x. */
+N   /* Returns: the largest integer not greater than x, expressed as a double */
+N
+Nextern _ARMABI double fmod(double /*x*/, double /*y*/);
+Xextern __declspec(__nothrow) double fmod(double  , double  );
+N   /* computes the floating-point remainder of x/y. */
+N   /* Returns: the value x - i * y, for some integer i such that, if y is */
+N   /*          nonzero, the result has the same sign as x and magnitude */
+N   /*          less than the magnitude of y. If y is zero, a domain error */
+N   /*          occurs and -HUGE_VAL is returned. */
+N
+N    /* Additional Mathlib functions not defined by the ANSI standard.
+N     * Not guaranteed, and not necessarily very well tested.
+N     * C99 requires the user to include <math.h> to use these functions
+N     * declaring them "by hand" is not sufficient
+N     *
+N     * The above statement is not completely true now.  Some of the above
+N     * C99 functionality has been added as per the Standard, and (where
+N     * necessary) old Mathlib functionality withdrawn/changed.  Before
+N     * including this header #define __ENABLE_MATHLIB_LEGACY if you want to
+N     * re-enable the legacy functionality.
+N     */
+N
+N#if !defined(__STRICT_ANSI__) || defined(__USE_C99_MATH)
+X#if !0L || 1L
+N
+Nextern _ARMABI double acosh(double /*x*/);
+Xextern __declspec(__nothrow) double acosh(double  );
+N    /*
+N     * Inverse cosh. EDOM if argument < 1.0
+N     */
+Nextern _ARMABI double asinh(double /*x*/);
+Xextern __declspec(__nothrow) double asinh(double  );
+N    /*
+N     * Inverse sinh.
+N     */
+Nextern _ARMABI double atanh(double /*x*/);
+Xextern __declspec(__nothrow) double atanh(double  );
+N    /*
+N     * Inverse tanh. EDOM if |argument| > 1.0
+N     */
+Nextern _ARMABI double cbrt(double /*x*/);
+Xextern __declspec(__nothrow) double cbrt(double  );
+N    /*
+N     * Cube root.
+N     */
+N_ARMABI_INLINE _ARMABI_PURE double copysign(double __x, double __y)
+Xinline __declspec(__nothrow) __attribute__((const)) double copysign(double __x, double __y)
+N    /*
+N     * Returns x with sign bit replaced by sign of y.
+N     */
+N{
+N    __HI(__x) = (__HI(__x) & 0x7fffffff) | (__HI(__y) & 0x80000000);
+X    (*(1 + (unsigned *)&(__x))) = ((*(1 + (unsigned *)&(__x))) & 0x7fffffff) | ((*(1 + (unsigned *)&(__y))) & 0x80000000);
+N    return __x;
+N}
+N_ARMABI_INLINE _ARMABI_PURE float copysignf(float __x, float __y)
+Xinline __declspec(__nothrow) __attribute__((const)) float copysignf(float __x, float __y)
+N    /*
+N     * Returns x with sign bit replaced by sign of y.
+N     */
+N{
+N    __FLT(__x) = (__FLT(__x) & 0x7fffffff) | (__FLT(__y) & 0x80000000);
+X    (*(unsigned *)&(__x)) = ((*(unsigned *)&(__x)) & 0x7fffffff) | ((*(unsigned *)&(__y)) & 0x80000000);
+N    return __x;
+N}
+Nextern _ARMABI double erf(double /*x*/);
+Xextern __declspec(__nothrow) double erf(double  );
+N    /*
+N     * Error function. (2/sqrt(pi)) * integral from 0 to x of exp(-t*t) dt.
+N     */
+Nextern _ARMABI double erfc(double /*x*/);
+Xextern __declspec(__nothrow) double erfc(double  );
+N    /*
+N     * 1-erf(x). (More accurate than just coding 1-erf(x), for large x.)
+N     */
+Nextern _ARMABI double expm1(double /*x*/);
+Xextern __declspec(__nothrow) double expm1(double  );
+N    /*
+N     * exp(x)-1. (More accurate than just coding exp(x)-1, for small x.)
+N     */
+N#define fpclassify(x) \
+N    ((sizeof(x) == sizeof(float)) ? \
+N        __ARM_fpclassifyf(x) : __ARM_fpclassify(x))
+X#define fpclassify(x)     ((sizeof(x) == sizeof(float)) ?         __ARM_fpclassifyf(x) : __ARM_fpclassify(x))
+N    /*
+N     * Classify a floating point number into one of the following values:
+N     */
+N#define FP_ZERO         (0)
+N#define FP_SUBNORMAL    (4)
+N#define FP_NORMAL       (5)
+N#define FP_INFINITE     (3)
+N#define FP_NAN          (7)
+N
+N#if defined(_WANT_SNAN) && defined(__SUPPORT_SNAN__)
+X#if 0L && 0L
+S/* 
+S * Note that we'll never classify a number as FP_NAN, as all NaNs will 
+S * be either FP_NANQ or FP_NANS
+S */
+S#  define FP_NANQ       (8)
+S#  define FP_NANS       (9)
+N#endif
+N
+N
+Nextern _ARMABI double hypot(double /*x*/, double /*y*/);
+Xextern __declspec(__nothrow) double hypot(double  , double  );
+N    /*
+N     * sqrt(x*x+y*y), ie the length of the vector (x,y) or the
+N     * hypotenuse of a right triangle whose other two sides are x
+N     * and y. Won't overflow unless the _answer_ is too big, even
+N     * if the intermediate x*x+y*y is too big.
+N     */
+Nextern _ARMABI int ilogb(double /*x*/);
+Xextern __declspec(__nothrow) int ilogb(double  );
+N    /*
+N     * Exponent of x (returns 0 for 1.0, 1 for 2.0, -1 for 0.5, etc.)
+N     */
+Nextern _ARMABI int ilogbf(float /*x*/);
+Xextern __declspec(__nothrow) int ilogbf(float  );
+N    /*
+N     * Like ilogb but takes a float
+N     */
+Nextern _ARMABI int ilogbl(long double /*x*/);
+Xextern __declspec(__nothrow) int ilogbl(long double  );
+N    /*
+N     * Exponent of x (returns 0 for 1.0, 1 for 2.0, -1 for 0.5, etc.)
+N     */
+N#define FP_ILOGB0   (-0x7fffffff) /* ilogb(0) == -INT_MAX */
+N#define FP_ILOGBNAN ( 0x80000000) /* ilogb(NAN) == INT_MIN */
+N
+N#define isfinite(x) \
+N    ((sizeof(x) == sizeof(float)) \
+N        ? __ARM_isfinitef(x) \
+N        : __ARM_isfinite(x))
+X#define isfinite(x)     ((sizeof(x) == sizeof(float))         ? __ARM_isfinitef(x)         : __ARM_isfinite(x))
+N    /*
+N     * Returns true if x is a finite number, size independent.
+N     */
+N
+N#define isgreater(x, y) \
+N    (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float))) \
+N        ? ((__ARM_fcmp4((x), (y)) & 0xf0000000) == 0x20000000) \
+N        : ((__ARM_dcmp4((x), (y)) & 0xf0000000) == 0x20000000))
+X#define isgreater(x, y)     (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float)))         ? ((__ARM_fcmp4((x), (y)) & 0xf0000000) == 0x20000000)         : ((__ARM_dcmp4((x), (y)) & 0xf0000000) == 0x20000000))
+N    /*
+N     * Returns true if x > y, throws no exceptions except on Signaling NaNs
+N     *
+N     * We want the C not set but the Z bit clear, V must be clear
+N     */
+N
+N#define isgreaterequal(x, y) \
+N    (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float))) \
+N        ? ((__ARM_fcmp4((x), (y)) & 0x30000000) == 0x20000000) \
+N        : ((__ARM_dcmp4((x), (y)) & 0x30000000) == 0x20000000))
+X#define isgreaterequal(x, y)     (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float)))         ? ((__ARM_fcmp4((x), (y)) & 0x30000000) == 0x20000000)         : ((__ARM_dcmp4((x), (y)) & 0x30000000) == 0x20000000))
+N    /*
+N     * Returns true if x >= y, throws no exceptions except on Signaling NaNs
+N     *
+N     * We just need to see if the C bit is set or not and ensure V clear
+N     */
+N
+N#define isinf(x) \
+N    ((sizeof(x) == sizeof(float)) \
+N        ? __ARM_isinff(x) \
+N        : __ARM_isinf(x))
+X#define isinf(x)     ((sizeof(x) == sizeof(float))         ? __ARM_isinff(x)         : __ARM_isinf(x))
+N    /*
+N     * Returns true if x is an infinity, size independent.
+N     */
+N
+N#define isless(x, y)  \
+N    (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float))) \
+N        ? ((__ARM_fcmp4((x), (y)) & 0xf0000000) == 0x80000000) \
+N        : ((__ARM_dcmp4((x), (y)) & 0xf0000000) == 0x80000000))
+X#define isless(x, y)      (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float)))         ? ((__ARM_fcmp4((x), (y)) & 0xf0000000) == 0x80000000)         : ((__ARM_dcmp4((x), (y)) & 0xf0000000) == 0x80000000))
+N    /*
+N     * Returns true if x < y, throws no exceptions except on Signaling NaNs
+N     *
+N     * We're less than if N is set, V clear
+N     */
+N
+N#define islessequal(x, y) \
+N    (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float))) \
+N        ? ((__ARM_fcmp4((x), (y)) & 0xc0000000) != 0) \
+N        : ((__ARM_dcmp4((x), (y)) & 0xc0000000) != 0))
+X#define islessequal(x, y)     (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float)))         ? ((__ARM_fcmp4((x), (y)) & 0xc0000000) != 0)         : ((__ARM_dcmp4((x), (y)) & 0xc0000000) != 0))
+N    /*
+N     * Returns true if x <= y, throws no exceptions except on Signaling NaNs
+N     *
+N     * We're less than or equal if one of N or Z is set, V clear
+N     */
+N
+N#define islessgreater(x, y) \
+N    (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float))) \
+N        ? __ARM_islessgreaterf((x), (y)) \
+N        : __ARM_islessgreater((x), (y)))
+X#define islessgreater(x, y)     (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float)))         ? __ARM_islessgreaterf((x), (y))         : __ARM_islessgreater((x), (y)))
+N    /*
+N     * Returns true if x <> y, throws no exceptions except on Signaling NaNs
+N     * Unfortunately this test is too complicated to do in a macro without
+N     * evaluating x & y twice.  Shame really...
+N     */
+N
+N#define isnan(x) \
+N    ((sizeof(x) == sizeof(float)) \
+N        ? __ARM_isnanf(x) \
+N        : __ARM_isnan(x))
+X#define isnan(x)     ((sizeof(x) == sizeof(float))         ? __ARM_isnanf(x)         : __ARM_isnan(x))
+N    /*
+N     * Returns TRUE if x is a NaN.
+N     */
+N
+N#define isnormal(x) \
+N    ((sizeof(x) == sizeof(float)) \
+N        ? __ARM_isnormalf(x) \
+N        : __ARM_isnormal(x))
+X#define isnormal(x)     ((sizeof(x) == sizeof(float))         ? __ARM_isnormalf(x)         : __ARM_isnormal(x))
+N    /*
+N     * Returns TRUE if x is a NaN.
+N     */
+N
+N#define isunordered(x, y) \
+N    (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float))) \
+N        ? ((__ARM_fcmp4((x), (y)) & 0x10000000) == 0x10000000) \
+N        : ((__ARM_dcmp4((x), (y)) & 0x10000000) == 0x10000000))
+X#define isunordered(x, y)     (((sizeof(x) == sizeof(float)) && (sizeof(y) == sizeof(float)))         ? ((__ARM_fcmp4((x), (y)) & 0x10000000) == 0x10000000)         : ((__ARM_dcmp4((x), (y)) & 0x10000000) == 0x10000000))
+N    /*
+N     * Returns true if x ? y, throws no exceptions except on Signaling NaNs
+N     * Unordered occurs if and only if the V bit is set
+N     */
+N
+Nextern _ARMABI double lgamma (double /*x*/);
+Xextern __declspec(__nothrow) double lgamma (double  );
+N    /*
+N     * The log of the absolute value of the gamma function of x. The sign
+N     * of the gamma function of x is returned in the global `signgam'.
+N     */
+Nextern _ARMABI double log1p(double /*x*/);
+Xextern __declspec(__nothrow) double log1p(double  );
+N    /*
+N     * log(1+x). (More accurate than just coding log(1+x), for small x.)
+N     */
+Nextern _ARMABI double logb(double /*x*/);
+Xextern __declspec(__nothrow) double logb(double  );
+N    /*
+N     * Like ilogb but returns a double.
+N     */
+Nextern _ARMABI float logbf(float /*x*/);
+Xextern __declspec(__nothrow) float logbf(float  );
+N    /*
+N     * Like logb but takes and returns float
+N     */
+Nextern _ARMABI long double logbl(long double /*x*/);
+Xextern __declspec(__nothrow) long double logbl(long double  );
+N    /*
+N     * Like logb but takes and returns long double
+N     */
+Nextern _ARMABI double nextafter(double /*x*/, double /*y*/);
+Xextern __declspec(__nothrow) double nextafter(double  , double  );
+N    /*
+N     * Returns the next representable number after x, in the
+N     * direction toward y.
+N     */
+Nextern _ARMABI float nextafterf(float /*x*/, float /*y*/);
+Xextern __declspec(__nothrow) float nextafterf(float  , float  );
+N    /*
+N     * Returns the next representable number after x, in the
+N     * direction toward y.
+N     */
+Nextern _ARMABI long double nextafterl(long double /*x*/, long double /*y*/);
+Xextern __declspec(__nothrow) long double nextafterl(long double  , long double  );
+N    /*
+N     * Returns the next representable number after x, in the
+N     * direction toward y.
+N     */
+Nextern _ARMABI double nexttoward(double /*x*/, long double /*y*/);
+Xextern __declspec(__nothrow) double nexttoward(double  , long double  );
+N    /*
+N     * Returns the next representable number after x, in the
+N     * direction toward y.
+N     */
+Nextern _ARMABI float nexttowardf(float /*x*/, long double /*y*/);
+Xextern __declspec(__nothrow) float nexttowardf(float  , long double  );
+N    /*
+N     * Returns the next representable number after x, in the
+N     * direction toward y.
+N     */
+Nextern _ARMABI long double nexttowardl(long double /*x*/, long double /*y*/);
+Xextern __declspec(__nothrow) long double nexttowardl(long double  , long double  );
+N    /*
+N     * Returns the next representable number after x, in the
+N     * direction toward y.
+N     */
+Nextern _ARMABI double remainder(double /*x*/, double /*y*/);
+Xextern __declspec(__nothrow) double remainder(double  , double  );
+N    /*
+N     * Returns the remainder of x by y, in the IEEE 754 sense.
+N     */
+Nextern _ARMABI_FPEXCEPT double rint(double /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double rint(double  );
+N    /*
+N     * Rounds x to an integer, in the IEEE 754 sense.
+N     */
+Nextern _ARMABI double scalbln(double /*x*/, long int /*n*/);
+Xextern __declspec(__nothrow) double scalbln(double  , long int  );
+N    /*
+N     * Compute x times 2^n quickly.
+N     */
+Nextern _ARMABI float scalblnf(float /*x*/, long int /*n*/);
+Xextern __declspec(__nothrow) float scalblnf(float  , long int  );
+N    /*
+N     * Compute x times 2^n quickly.
+N     */
+Nextern _ARMABI long double scalblnl(long double /*x*/, long int /*n*/);
+Xextern __declspec(__nothrow) long double scalblnl(long double  , long int  );
+N    /*
+N     * Compute x times 2^n quickly.
+N     */
+Nextern _ARMABI double scalbn(double /*x*/, int /*n*/);
+Xextern __declspec(__nothrow) double scalbn(double  , int  );
+N    /*
+N     * Compute x times 2^n quickly.
+N     */
+Nextern _ARMABI float scalbnf(float /*x*/, int /*n*/);
+Xextern __declspec(__nothrow) float scalbnf(float  , int  );
+N    /*
+N     * Compute x times 2^n quickly.
+N     */
+Nextern _ARMABI long double scalbnl(long double /*x*/, int /*n*/);
+Xextern __declspec(__nothrow) long double scalbnl(long double  , int  );
+N    /*
+N     * Compute x times 2^n quickly.
+N     */
+N#define signbit(x) \
+N    ((sizeof(x) == sizeof(float)) \
+N        ? __ARM_signbitf(x) \
+N        : __ARM_signbit(x))
+X#define signbit(x)     ((sizeof(x) == sizeof(float))         ? __ARM_signbitf(x)         : __ARM_signbit(x))
+N    /*
+N     * Returns the signbit of x, size independent macro
+N     */
+N#endif
+N
+N/* C99 float versions of functions.  math.h has always reserved these
+N   identifiers for this purpose (7.13.4). */
+Nextern _ARMABI_PURE float _fabsf(float); /* old ARM name */
+Xextern __declspec(__nothrow) __attribute__((const)) float _fabsf(float);  
+N_ARMABI_INLINE _ARMABI_PURE float fabsf(float __f) { return _fabsf(__f); }
+Xinline __declspec(__nothrow) __attribute__((const)) float fabsf(float __f) { return _fabsf(__f); }
+Nextern _ARMABI float sinf(float /*x*/);
+Xextern __declspec(__nothrow) float sinf(float  );
+Nextern _ARMABI float cosf(float /*x*/);
+Xextern __declspec(__nothrow) float cosf(float  );
+Nextern _ARMABI float tanf(float /*x*/);
+Xextern __declspec(__nothrow) float tanf(float  );
+Nextern _ARMABI float acosf(float /*x*/);
+Xextern __declspec(__nothrow) float acosf(float  );
+Nextern _ARMABI float asinf(float /*x*/);
+Xextern __declspec(__nothrow) float asinf(float  );
+Nextern _ARMABI float atanf(float /*x*/);
+Xextern __declspec(__nothrow) float atanf(float  );
+Nextern _ARMABI float atan2f(float /*y*/, float /*x*/);
+Xextern __declspec(__nothrow) float atan2f(float  , float  );
+Nextern _ARMABI float sinhf(float /*x*/);
+Xextern __declspec(__nothrow) float sinhf(float  );
+Nextern _ARMABI float coshf(float /*x*/);
+Xextern __declspec(__nothrow) float coshf(float  );
+Nextern _ARMABI float tanhf(float /*x*/);
+Xextern __declspec(__nothrow) float tanhf(float  );
+Nextern _ARMABI float expf(float /*x*/);
+Xextern __declspec(__nothrow) float expf(float  );
+Nextern _ARMABI float logf(float /*x*/);
+Xextern __declspec(__nothrow) float logf(float  );
+Nextern _ARMABI float log10f(float /*x*/);
+Xextern __declspec(__nothrow) float log10f(float  );
+Nextern _ARMABI float powf(float /*x*/, float /*y*/);
+Xextern __declspec(__nothrow) float powf(float  , float  );
+Nextern _ARMABI float sqrtf(float /*x*/);
+Xextern __declspec(__nothrow) float sqrtf(float  );
+Nextern _ARMABI float ldexpf(float /*x*/, int /*exp*/);
+Xextern __declspec(__nothrow) float ldexpf(float  , int  );
+Nextern _ARMABI float frexpf(float /*value*/, int * /*exp*/) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) float frexpf(float  , int *  ) __attribute__((__nonnull__(2)));
+Nextern _ARMABI_PURE float ceilf(float /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) float ceilf(float  );
+Nextern _ARMABI_PURE float floorf(float /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) float floorf(float  );
+Nextern _ARMABI float fmodf(float /*x*/, float /*y*/);
+Xextern __declspec(__nothrow) float fmodf(float  , float  );
+Nextern _ARMABI float modff(float /*value*/, float * /*iptr*/) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) float modff(float  , float *  ) __attribute__((__nonnull__(2)));
+N
+N/* C99 long double versions of functions. */
+N/* (also need to have 'using' declarations below) */
+N#define _ARMDEFLD1(f) \
+N    _ARMABI long double f##l(long double /*x*/)
+X#define _ARMDEFLD1(f)     _ARMABI long double f##l(long double  )
+N
+N#define _ARMDEFLD1P(f, T) \
+N    _ARMABI long double f##l(long double /*x*/, T /*p*/)
+X#define _ARMDEFLD1P(f, T)     _ARMABI long double f##l(long double  , T  )
+N
+N#define _ARMDEFLD2(f) \
+N    _ARMABI long double f##l(long double /*x*/, long double /*y*/)
+X#define _ARMDEFLD2(f)     _ARMABI long double f##l(long double  , long double  )
+N
+N/*
+N * Long double versions of C89 functions can be defined
+N * unconditionally, because C89 reserved these names in "future
+N * library directions".
+N */
+N_ARMDEFLD1(acos);
+X__declspec(__nothrow) long double acosl(long double );
+N_ARMDEFLD1(asin);
+X__declspec(__nothrow) long double asinl(long double );
+N_ARMDEFLD1(atan);
+X__declspec(__nothrow) long double atanl(long double );
+N_ARMDEFLD2(atan2);
+X__declspec(__nothrow) long double atan2l(long double , long double );
+N_ARMDEFLD1(ceil);
+X__declspec(__nothrow) long double ceill(long double );
+N_ARMDEFLD1(cos);
+X__declspec(__nothrow) long double cosl(long double );
+N_ARMDEFLD1(cosh);
+X__declspec(__nothrow) long double coshl(long double );
+N_ARMDEFLD1(exp);
+X__declspec(__nothrow) long double expl(long double );
+N_ARMDEFLD1(fabs);
+X__declspec(__nothrow) long double fabsl(long double );
+N_ARMDEFLD1(floor);
+X__declspec(__nothrow) long double floorl(long double );
+N_ARMDEFLD2(fmod);
+X__declspec(__nothrow) long double fmodl(long double , long double );
+N_ARMDEFLD1P(frexp, int*) __attribute__((__nonnull__(2)));
+X__declspec(__nothrow) long double frexpl(long double , int* ) __attribute__((__nonnull__(2)));
+N_ARMDEFLD1P(ldexp, int);
+X__declspec(__nothrow) long double ldexpl(long double , int );
+N_ARMDEFLD1(log);
+X__declspec(__nothrow) long double logl(long double );
+N_ARMDEFLD1(log10);
+X__declspec(__nothrow) long double log10l(long double );
+N_ARMABI long double modfl(long double /*x*/, long double * /*p*/) __attribute__((__nonnull__(2)));
+X__declspec(__nothrow) long double modfl(long double  , long double *  ) __attribute__((__nonnull__(2)));
+N_ARMDEFLD2(pow);
+X__declspec(__nothrow) long double powl(long double , long double );
+N_ARMDEFLD1(sin);
+X__declspec(__nothrow) long double sinl(long double );
+N_ARMDEFLD1(sinh);
+X__declspec(__nothrow) long double sinhl(long double );
+N_ARMDEFLD1(sqrt);
+X__declspec(__nothrow) long double sqrtl(long double );
+N_ARMDEFLD1(tan);
+X__declspec(__nothrow) long double tanl(long double );
+N_ARMDEFLD1(tanh);
+X__declspec(__nothrow) long double tanhl(long double );
+N
+N#if !defined(__STRICT_ANSI__) || defined(__USE_C99_MATH)
+X#if !0L || 1L
+N
+N/*
+N * C99 float and long double versions of extra-C89 functions.
+N */
+Nextern _ARMABI float acoshf(float /*x*/);
+Xextern __declspec(__nothrow) float acoshf(float  );
+N_ARMDEFLD1(acosh);
+X__declspec(__nothrow) long double acoshl(long double );
+Nextern _ARMABI float asinhf(float /*x*/);
+Xextern __declspec(__nothrow) float asinhf(float  );
+N_ARMDEFLD1(asinh);
+X__declspec(__nothrow) long double asinhl(long double );
+Nextern _ARMABI float atanhf(float /*x*/);
+Xextern __declspec(__nothrow) float atanhf(float  );
+N_ARMDEFLD1(atanh);
+X__declspec(__nothrow) long double atanhl(long double );
+N_ARMDEFLD2(copysign);
+X__declspec(__nothrow) long double copysignl(long double , long double );
+Nextern _ARMABI float cbrtf(float /*x*/);
+Xextern __declspec(__nothrow) float cbrtf(float  );
+N_ARMDEFLD1(cbrt);
+X__declspec(__nothrow) long double cbrtl(long double );
+Nextern _ARMABI float erff(float /*x*/);
+Xextern __declspec(__nothrow) float erff(float  );
+N_ARMDEFLD1(erf);
+X__declspec(__nothrow) long double erfl(long double );
+Nextern _ARMABI float erfcf(float /*x*/);
+Xextern __declspec(__nothrow) float erfcf(float  );
+N_ARMDEFLD1(erfc);
+X__declspec(__nothrow) long double erfcl(long double );
+Nextern _ARMABI float expm1f(float /*x*/);
+Xextern __declspec(__nothrow) float expm1f(float  );
+N_ARMDEFLD1(expm1);
+X__declspec(__nothrow) long double expm1l(long double );
+Nextern _ARMABI float log1pf(float /*x*/);
+Xextern __declspec(__nothrow) float log1pf(float  );
+N_ARMDEFLD1(log1p);
+X__declspec(__nothrow) long double log1pl(long double );
+Nextern _ARMABI float hypotf(float /*x*/, float /*y*/);
+Xextern __declspec(__nothrow) float hypotf(float  , float  );
+N_ARMDEFLD2(hypot);
+X__declspec(__nothrow) long double hypotl(long double , long double );
+Nextern _ARMABI float lgammaf(float /*x*/);
+Xextern __declspec(__nothrow) float lgammaf(float  );
+N_ARMDEFLD1(lgamma);
+X__declspec(__nothrow) long double lgammal(long double );
+Nextern _ARMABI float remainderf(float /*x*/, float /*y*/);
+Xextern __declspec(__nothrow) float remainderf(float  , float  );
+N_ARMDEFLD2(remainder);
+X__declspec(__nothrow) long double remainderl(long double , long double );
+Nextern _ARMABI float rintf(float /*x*/);
+Xextern __declspec(__nothrow) float rintf(float  );
+N_ARMDEFLD1(rint);
+X__declspec(__nothrow) long double rintl(long double );
+N
+N#endif
+N
+N#ifdef __USE_C99_MATH
+N/*
+N * Functions new in C99.
+N */
+Nextern _ARMABI double exp2(double /*x*/); /* * 2.^x. */
+Xextern __declspec(__nothrow) double exp2(double  );  
+Nextern _ARMABI float exp2f(float /*x*/);
+Xextern __declspec(__nothrow) float exp2f(float  );
+N_ARMDEFLD1(exp2);
+X__declspec(__nothrow) long double exp2l(long double );
+Nextern _ARMABI double fdim(double /*x*/, double /*y*/);
+Xextern __declspec(__nothrow) double fdim(double  , double  );
+Nextern _ARMABI float fdimf(float /*x*/, float /*y*/);
+Xextern __declspec(__nothrow) float fdimf(float  , float  );
+N_ARMDEFLD2(fdim);
+X__declspec(__nothrow) long double fdiml(long double , long double );
+N#ifdef __FP_FAST_FMA
+N#define FP_FAST_FMA
+N#endif
+N#ifdef __FP_FAST_FMAF
+N#define FP_FAST_FMAF
+N#endif
+N#ifdef __FP_FAST_FMAL
+N#define FP_FAST_FMAL
+N#endif
+Nextern _ARMABI double fma(double /*x*/, double /*y*/, double /*z*/);
+Xextern __declspec(__nothrow) double fma(double  , double  , double  );
+Nextern _ARMABI float fmaf(float /*x*/, float /*y*/, float /*z*/);
+Xextern __declspec(__nothrow) float fmaf(float  , float  , float  );
+N#ifdef __HAVE_LONGDOUBLE
+N_ARMABI_INLINE _ARMABI long double fmal(long double __x, long double __y, long double __z) \
+N    { return (long double)fma((double)__x, (double)__y, (double)__z); }
+Xinline __declspec(__nothrow) long double fmal(long double __x, long double __y, long double __z)     { return (long double)fma((double)__x, (double)__y, (double)__z); }
+N#endif
+Nextern _ARMABI_FPEXCEPT double fmax(double /*x*/, double /*y*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double fmax(double  , double  );
+Nextern _ARMABI_FPEXCEPT float fmaxf(float /*x*/, float /*y*/);
+Xextern __declspec(__nothrow) __attribute__((const)) float fmaxf(float  , float  );
+N_ARMDEFLD2(fmax);
+X__declspec(__nothrow) long double fmaxl(long double , long double );
+Nextern _ARMABI_FPEXCEPT double fmin(double /*x*/, double /*y*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double fmin(double  , double  );
+Nextern _ARMABI_FPEXCEPT float fminf(float /*x*/, float /*y*/);
+Xextern __declspec(__nothrow) __attribute__((const)) float fminf(float  , float  );
+N_ARMDEFLD2(fmin);
+X__declspec(__nothrow) long double fminl(long double , long double );
+Nextern _ARMABI double log2(double /*x*/); /* * log base 2 of x. */
+Xextern __declspec(__nothrow) double log2(double  );  
+Nextern _ARMABI float log2f(float /*x*/);
+Xextern __declspec(__nothrow) float log2f(float  );
+N_ARMDEFLD1(log2);
+X__declspec(__nothrow) long double log2l(long double );
+Nextern _ARMABI long lrint(double /*x*/);
+Xextern __declspec(__nothrow) long lrint(double  );
+Nextern _ARMABI long lrintf(float /*x*/);
+Xextern __declspec(__nothrow) long lrintf(float  );
+N#ifdef __HAVE_LONGDOUBLE
+N_ARMABI_INLINE _ARMABI long lrintl(long double __x) \
+N    { return lrint((double)__x); }
+Xinline __declspec(__nothrow) long lrintl(long double __x)     { return lrint((double)__x); }
+N#endif
+Nextern _ARMABI __LONGLONG llrint(double /*x*/);
+Xextern __declspec(__nothrow) long long llrint(double  );
+Nextern _ARMABI __LONGLONG llrintf(float /*x*/);
+Xextern __declspec(__nothrow) long long llrintf(float  );
+N#ifdef __HAVE_LONGDOUBLE
+N_ARMABI_INLINE _ARMABI __LONGLONG llrintl(long double __x) \
+N    { return llrint((double)__x); }
+Xinline __declspec(__nothrow) long long llrintl(long double __x)     { return llrint((double)__x); }
+N#endif
+Nextern _ARMABI long lround(double /*x*/);
+Xextern __declspec(__nothrow) long lround(double  );
+Nextern _ARMABI long lroundf(float /*x*/);
+Xextern __declspec(__nothrow) long lroundf(float  );
+N#ifdef __HAVE_LONGDOUBLE
+N_ARMABI_INLINE _ARMABI long lroundl(long double __x) \
+N    { return lround((double)__x); }
+Xinline __declspec(__nothrow) long lroundl(long double __x)     { return lround((double)__x); }
+N#endif
+Nextern _ARMABI __LONGLONG llround(double /*x*/);
+Xextern __declspec(__nothrow) long long llround(double  );
+Nextern _ARMABI __LONGLONG llroundf(float /*x*/);
+Xextern __declspec(__nothrow) long long llroundf(float  );
+N#ifdef __HAVE_LONGDOUBLE
+N_ARMABI_INLINE _ARMABI __LONGLONG llroundl(long double __x) \
+N    { return llround((double)__x); }
+Xinline __declspec(__nothrow) long long llroundl(long double __x)     { return llround((double)__x); }
+N#endif
+Nextern _ARMABI_PURE double nan(const char */*tagp*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double nan(const char * );
+Nextern _ARMABI_PURE float nanf(const char */*tagp*/);
+Xextern __declspec(__nothrow) __attribute__((const)) float nanf(const char * );
+N#ifdef __HAVE_LONGDOUBLE
+N_ARMABI_INLINE _ARMABI_PURE long double nanl(const char *__t) \
+N    { return (long double)nan(__t); }
+Xinline __declspec(__nothrow) __attribute__((const)) long double nanl(const char *__t)     { return (long double)nan(__t); }
+N#endif
+N#if defined(_WANT_SNAN) && defined(__SUPPORT_SNAN__)
+X#if 0L && 0L
+Sextern _ARMABI_PURE double nans(const char */*tagp*/);
+Sextern _ARMABI_PURE float nansf(const char */*tagp*/);
+S#ifdef __HAVE_LONGDOUBLE
+S_ARMABI_INLINE _ARMABI_FPEXCEPT long double nansl(const char *__t) \
+S    { return (long double)nans(__t); }
+X_ARMABI_INLINE _ARMABI_FPEXCEPT long double nansl(const char *__t)     { return (long double)nans(__t); }
+S#endif
+N#endif 
+Nextern _ARMABI_FPEXCEPT double nearbyint(double /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double nearbyint(double  );
+Nextern _ARMABI_FPEXCEPT float nearbyintf(float /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) float nearbyintf(float  );
+N_ARMDEFLD1(nearbyint);
+X__declspec(__nothrow) long double nearbyintl(long double );
+Nextern  double remquo(double /*x*/, double /*y*/, int */*quo*/);
+Nextern  float remquof(float /*x*/, float /*y*/, int */*quo*/);
+N#ifdef __HAVE_LONGDOUBLE
+N_ARMABI_INLINE long double remquol(long double __x, long double __y, int *__q) \
+N    { return (long double)remquo((double)__x, (double)__y, __q); }
+Xinline long double remquol(long double __x, long double __y, int *__q)     { return (long double)remquo((double)__x, (double)__y, __q); }
+N#endif
+Nextern _ARMABI_FPEXCEPT double round(double /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double round(double  );
+Nextern _ARMABI_FPEXCEPT float roundf(float /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) float roundf(float  );
+N_ARMDEFLD1(round);
+X__declspec(__nothrow) long double roundl(long double );
+Nextern _ARMABI double tgamma(double /*x*/); /* * The gamma function of x. */
+Xextern __declspec(__nothrow) double tgamma(double  );  
+Nextern _ARMABI float tgammaf(float /*x*/);
+Xextern __declspec(__nothrow) float tgammaf(float  );
+N_ARMDEFLD1(tgamma);
+X__declspec(__nothrow) long double tgammal(long double );
+Nextern _ARMABI_FPEXCEPT double trunc(double /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) double trunc(double  );
+Nextern _ARMABI_FPEXCEPT float truncf(float /*x*/);
+Xextern __declspec(__nothrow) __attribute__((const)) float truncf(float  );
+N_ARMDEFLD1(trunc);
+X__declspec(__nothrow) long double truncl(long double );
+N#endif
+N
+N#undef _ARMDEFLD1
+N#undef _ARMDEFLD1P
+N#undef _ARMDEFLD2
+N
+N#ifdef __cplusplus
+S  extern "C++" {
+S    inline float abs(float __x)   { return fabsf(__x); }
+S    inline float acos(float __x)  { return acosf(__x); }
+S    inline float asin(float __x)  { return asinf(__x); }
+S    inline float atan(float __x)  { return atanf(__x); }
+S    inline float atan2(float __y, float __x)    { return atan2f(__y,__x); }
+S    inline float ceil(float __x)  { return ceilf(__x); }
+S    inline float cos(float __x)   { return cosf(__x); }
+S    inline float cosh(float __x)  { return coshf(__x); }
+S    inline float exp(float __x)   { return expf(__x); }
+S    inline float fabs(float __x)  { return fabsf(__x); }
+S    inline float floor(float __x) { return floorf(__x); }
+S    inline float fmod(float __x, float __y)     { return fmodf(__x, __y); }
+S    float frexp(float __x, int* __exp) __attribute__((__nonnull__(2)));
+S    inline float frexp(float __x, int* __exp)   { return frexpf(__x, __exp); }
+S    inline float ldexp(float __x, int __exp)    { return ldexpf(__x, __exp);}
+S    inline float log(float __x)   { return logf(__x); }
+S    inline float log10(float __x) { return log10f(__x); }
+S    float modf(float __x, float* __iptr) __attribute__((__nonnull__(2)));
+S    inline float modf(float __x, float* __iptr) { return modff(__x, __iptr); }
+S    inline float pow(float __x, float __y)      { return powf(__x,__y); }
+S    inline float pow(float __x, int __y)     { return powf(__x, (float)__y); }
+S    inline float sin(float __x)   { return sinf(__x); }
+S    inline float sinh(float __x)  { return sinhf(__x); }
+S    inline float sqrt(float __x)  { return sqrtf(__x); }
+S    inline float _sqrt(float __x) { return _sqrtf(__x); }
+S    inline float tan(float __x)   { return tanf(__x); }
+S    inline float tanh(float __x)  { return tanhf(__x); }
+S
+S    inline double abs(double __x) { return fabs(__x); }
+S    inline double pow(double __x, int __y)
+S                { return pow(__x, (double) __y); }
+S
+S#ifdef __HAVE_LONGDOUBLE
+S    inline long double abs(long double __x)
+S                { return (long double)fabsl(__x); }
+S    inline long double acos(long double __x)
+S                { return (long double)acosl(__x); }
+S    inline long double asin(long double __x)
+S                { return (long double)asinl(__x); }
+S    inline long double atan(long double __x)
+S                { return (long double)atanl(__x); }
+S    inline long double atan2(long double __y, long double __x)
+S                { return (long double)atan2l(__y, __x); }
+S    inline long double ceil(long double __x)
+S                { return (long double)ceill( __x); }
+S    inline long double cos(long double __x)
+S                { return (long double)cosl(__x); }
+S    inline long double cosh(long double __x)
+S                { return (long double)coshl(__x); }
+S    inline long double exp(long double __x)
+S                { return (long double)expl(__x); }
+S    inline long double fabs(long double __x)
+S                { return (long double)fabsl(__x); }
+S    inline long double floor(long double __x)
+S                { return (long double)floorl(__x); }
+S    inline long double fmod(long double __x, long double __y)
+S                { return (long double)fmodl(__x, __y); }
+S    long double frexp(long double __x, int* __p) __attribute__((__nonnull__(2)));
+S    inline long double frexp(long double __x, int* __p)
+S                { return (long double)frexpl(__x, __p); }
+S    inline long double ldexp(long double __x, int __exp)
+S                { return (long double)ldexpl(__x, __exp); }
+S    inline long double log(long double __x)
+S                { return (long double)logl(__x); }
+S    inline long double log10(long double __x)
+S                { return (long double)log10l(__x); }
+S    long double modf(long double __x, long double* __p) __attribute__((__nonnull__(2)));
+S    inline long double modf(long double __x, long double* __p)
+S                { return (long double)modfl(__x, __p); }
+S    inline long double pow(long double __x, long double __y)
+S                { return (long double)powl(__x, __y); }
+S    inline long double pow(long double __x, int __y)
+S                { return (long double)powl(__x, __y); }
+S    inline long double sin(long double __x)
+S                { return (long double)sinl(__x); }
+S    inline long double sinh(long double __x)
+S                { return (long double)sinhl(__x); }
+S    inline long double sqrt(long double __x)
+S                { return (long double)sqrtl(__x); }
+S    inline long double _sqrt(long double __x)
+S                { return (long double)_sqrt((double) __x); }
+S    inline long double tan(long double __x)
+S                { return (long double)tanl(__x); }
+S    inline long double tanh(long double __x)
+S                { return (long double)tanhl(__x); }
+S#endif
+S
+S#if !defined(__STRICT_ANSI__) || defined(__USE_C99_MATH)
+S    inline float acosh(float __x) { return acoshf(__x); }
+S    inline float asinh(float __x) { return asinhf(__x); }
+S    inline float atanh(float __x) { return atanhf(__x); }
+S    inline float cbrt(float __x) { return cbrtf(__x); }
+S    inline float erf(float __x) { return erff(__x); }
+S    inline float erfc(float __x) { return erfcf(__x); }
+S    inline float expm1(float __x) { return expm1f(__x); }
+S    inline float log1p(float __x) { return log1pf(__x); }
+S    inline float hypot(float __x, float __y) { return hypotf(__x, __y); }
+S    inline float lgamma(float __x) { return lgammaf(__x); }
+S    inline float remainder(float __x, float __y) { return remainderf(__x, __y); }
+S    inline float rint(float __x) { return rintf(__x); }
+S#endif
+S
+S#ifdef __USE_C99_MATH
+S    inline float exp2(float __x) { return exp2f(__x); }
+S    inline float fdim(float __x, float __y) { return fdimf(__x, __y); }
+S    inline float fma(float __x, float __y, float __z) { return fmaf(__x, __y, __z); }
+S    inline float fmax(float __x, float __y) { return fmaxf(__x, __y); }
+S    inline float fmin(float __x, float __y) { return fminf(__x, __y); }
+S    inline float log2(float __x) { return log2f(__x); }
+S    inline _ARMABI long lrint(float __x) { return lrintf(__x); }
+S    inline _ARMABI __LONGLONG llrint(float __x) { return llrintf(__x); }
+S    inline _ARMABI long lround(float __x) { return lroundf(__x); }
+S    inline _ARMABI __LONGLONG llround(float __x) { return llroundf(__x); }
+S    inline _ARMABI_FPEXCEPT float nearbyint(float __x) { return nearbyintf(__x); }
+S    inline float remquo(float __x, float __y, int *__q) { return remquof(__x, __y, __q); }
+S    inline _ARMABI_FPEXCEPT float round(float __x) { return roundf(__x); }
+S    inline float tgamma(float __x) { return tgammaf(__x); }
+S    inline _ARMABI_FPEXCEPT float trunc(float __x) { return truncf(__x); }
+S
+S#ifdef __HAVE_LONGDOUBLE
+S    inline long double acosh(long double __x) { return acoshl(__x); }
+S    inline long double asinh(long double __x) { return asinhl(__x); }
+S    inline long double atanh(long double __x) { return atanhl(__x); }
+S    inline long double cbrt(long double __x) { return cbrtl(__x); }
+S    inline long double erf(long double __x) { return erfl(__x); }
+S    inline long double erfc(long double __x) { return erfcl(__x); }
+S    inline long double expm1(long double __x) { return expm1l(__x); }
+S    inline long double log1p(long double __x) { return log1pl(__x); }
+S    inline long double hypot(long double __x, long double __y) { return hypotl(__x, __y); }
+S    inline long double lgamma(long double __x) { return lgammal(__x); }
+S    inline long double remainder(long double __x, long double __y) { return remainderl(__x, __y); }
+S    inline long double rint(long double __x) { return rintl(__x); }
+S    inline long double exp2(long double __x) { return exp2l(__x); }
+S    inline long double fdim(long double __x, long double __y) { return fdiml(__x, __y); }
+S    inline long double fma(long double __x, long double __y, long double __z) { return fmal(__x, __y, __z); }
+S    inline long double fmax(long double __x, long double __y) { return fmaxl(__x, __y); }
+S    inline long double fmin(long double __x, long double __y) { return fminl(__x, __y); }
+S    inline long double log2(long double __x) { return log2l(__x); }
+S    inline _ARMABI long lrint(long double __x) { return lrintl(__x); }
+S    inline _ARMABI __LONGLONG llrint(long double __x) { return llrintl(__x); }
+S    inline _ARMABI long lround(long double __x) { return lroundl(__x); }
+S    inline _ARMABI __LONGLONG llround(long double __x) { return llroundl(__x); }
+S    inline _ARMABI_FPEXCEPT long double nearbyint(long double __x) { return nearbyintl(__x); }
+S    inline long double remquo(long double __x, long double __y, int *__q) { return remquol(__x, __y, __q); }
+S    inline _ARMABI_FPEXCEPT long double round(long double __x) { return roundl(__x); }
+S    inline long double tgamma(long double __x) { return tgammal(__x); }
+S    inline _ARMABI_FPEXCEPT long double trunc(long double __x) { return truncl(__x); }
+S#endif
+S#endif
+S
+S  }
+N#endif
+N
+N    #ifdef __cplusplus
+S        }  /* extern "C" */
+S      }  /* namespace std */
+N    #endif
+N  #endif /* __MATH_DECLS */
+N
+N  #if _AEABI_PORTABILITY_LEVEL != 0 && !defined _AEABI_PORTABLE
+X  #if _AEABI_PORTABILITY_LEVEL != 0 && !0L
+S    #define _AEABI_PORTABLE
+N  #endif
+N
+N  #if defined(__cplusplus) && !defined(__MATH_NO_EXPORTS)
+X  #if 0L && !0L
+S    using ::std::__use_accurate_range_reduction;
+S    using ::std::abs;
+S    using ::std::acos;
+S    using ::std::asin;
+S    using ::std::atan2;
+S    using ::std::atan;
+S    using ::std::ceil;
+S    using ::std::cos;
+S    using ::std::cosh;
+S    using ::std::exp;
+S    using ::std::fabs;
+S    using ::std::floor;
+S    using ::std::fmod;
+S    using ::std::frexp;
+S    using ::std::ldexp;
+S    using ::std::log10;
+S    using ::std::log;
+S    using ::std::modf;
+S    using ::std::pow;
+S    using ::std::sin;
+S    using ::std::sinh;
+S    using ::std::sqrt;
+S    using ::std::_sqrt;
+S    using ::std::_sqrtf;
+S    using ::std::tan;
+S    using ::std::tanh;
+S    using ::std::_fabsf;
+S    /* C99 float and long double versions in already-C89-reserved namespace */
+S    using ::std::acosf;
+S    using ::std::acosl;
+S    using ::std::asinf;
+S    using ::std::asinl;
+S    using ::std::atan2f;
+S    using ::std::atan2l;
+S    using ::std::atanf;
+S    using ::std::atanl;
+S    using ::std::ceilf;
+S    using ::std::ceill;
+S    using ::std::cosf;
+S    using ::std::coshf;
+S    using ::std::coshl;
+S    using ::std::cosl;
+S    using ::std::expf;
+S    using ::std::expl;
+S    using ::std::fabsf;
+S    using ::std::fabsl;
+S    using ::std::floorf;
+S    using ::std::floorl;
+S    using ::std::fmodf;
+S    using ::std::fmodl;
+S    using ::std::frexpf;
+S    using ::std::frexpl;
+S    using ::std::ldexpf;
+S    using ::std::ldexpl;
+S    using ::std::log10f;
+S    using ::std::log10l;
+S    using ::std::logf;
+S    using ::std::logl;
+S    using ::std::modff;
+S    using ::std::modfl;
+S    using ::std::powf;
+S    using ::std::powl;
+S    using ::std::sinf;
+S    using ::std::sinhf;
+S    using ::std::sinhl;
+S    using ::std::sinl;
+S    using ::std::sqrtf;
+S    using ::std::sqrtl;
+S    using ::std::tanf;
+S    using ::std::tanhf;
+S    using ::std::tanhl;
+S    using ::std::tanl;
+S    #if !defined(__STRICT_ANSI__) || defined(__USE_C99_MATH)
+S      /* C99 additions which for historical reasons appear in non-strict mode */
+S      using ::std::acosh;
+S      using ::std::asinh;
+S      using ::std::atanh;
+S      using ::std::cbrt;
+S      using ::std::copysign;
+S      using ::std::copysignf;
+S      using ::std::erf;
+S      using ::std::erfc;
+S      using ::std::expm1;
+S      using ::std::hypot;
+S      using ::std::ilogb;
+S      using ::std::ilogbf;
+S      using ::std::ilogbl;
+S      using ::std::lgamma;
+S      using ::std::log1p;
+S      using ::std::logb;
+S      using ::std::logbf;
+S      using ::std::logbl;
+S      using ::std::nextafter;
+S      using ::std::nextafterf;
+S      using ::std::nextafterl;
+S      using ::std::nexttoward;
+S      using ::std::nexttowardf;
+S      using ::std::nexttowardl;
+S      using ::std::remainder;
+S      using ::std::rint;
+S      using ::std::scalbln;
+S      using ::std::scalblnf;
+S      using ::std::scalblnl;
+S      using ::std::scalbn;
+S      using ::std::scalbnf;
+S      using ::std::scalbnl;
+S      using ::std::math_errhandling;
+S      using ::std::acoshf;
+S      using ::std::acoshl;
+S      using ::std::asinhf;
+S      using ::std::asinhl;
+S      using ::std::atanhf;
+S      using ::std::atanhl;
+S      using ::std::copysignl;
+S      using ::std::cbrtf;
+S      using ::std::cbrtl;
+S      using ::std::erff;
+S      using ::std::erfl;
+S      using ::std::erfcf;
+S      using ::std::erfcl;
+S      using ::std::expm1f;
+S      using ::std::expm1l;
+S      using ::std::log1pf;
+S      using ::std::log1pl;
+S      using ::std::hypotf;
+S      using ::std::hypotl;
+S      using ::std::lgammaf;
+S      using ::std::lgammal;
+S      using ::std::remainderf;
+S      using ::std::remainderl;
+S      using ::std::rintf;
+S      using ::std::rintl;
+S    #endif
+S    #if !defined(__STRICT_ANSI__) || defined(__USE_C99_MATH)
+S      /* C99 additions which appear in C99 or non-strict mode */
+S      using ::std::float_t;
+S      using ::std::double_t;
+S    #endif
+S    #ifdef __USE_C99_MATH
+S      /* Functions new in C99. */
+S      using ::std::exp2;
+S      using ::std::exp2f;
+S      using ::std::exp2l;
+S      using ::std::fdim;
+S      using ::std::fdimf;
+S      using ::std::fdiml;
+S      using ::std::fma;
+S      using ::std::fmaf;
+S#ifdef __HAVE_LONGDOUBLE
+S      using ::std::fmal;
+S#endif
+S      using ::std::fmax;
+S      using ::std::fmaxf;
+S      using ::std::fmaxl;
+S      using ::std::fmin;
+S      using ::std::fminf;
+S      using ::std::fminl;
+S      using ::std::log2;
+S      using ::std::log2f;
+S      using ::std::log2l;
+S      using ::std::lrint;
+S      using ::std::lrintf;
+S#ifdef __HAVE_LONGDOUBLE
+S      using ::std::lrintl;
+S#endif
+S      using ::std::llrint;
+S      using ::std::llrintf;
+S#ifdef __HAVE_LONGDOUBLE
+S      using ::std::llrintl;
+S#endif
+S      using ::std::lround;
+S      using ::std::lroundf;
+S#ifdef __HAVE_LONGDOUBLE
+S      using ::std::lroundl;
+S#endif
+S      using ::std::llround;
+S      using ::std::llroundf;
+S#ifdef __HAVE_LONGDOUBLE
+S      using ::std::llroundl;
+S#endif
+S      using ::std::nan;
+S      using ::std::nanf;
+S#ifdef __HAVE_LONGDOUBLE
+S      using ::std::nanl;
+S#endif
+S      using ::std::nearbyint;
+S      using ::std::nearbyintf;
+S      using ::std::nearbyintl;
+S      using ::std::remquo;
+S      using ::std::remquof;
+S#ifdef __HAVE_LONGDOUBLE
+S      using ::std::remquol;
+S#endif
+S      using ::std::round;
+S      using ::std::roundf;
+S      using ::std::roundl;
+S      using ::std::tgamma;
+S      using ::std::tgammaf;
+S      using ::std::tgammal;
+S      using ::std::trunc;
+S      using ::std::truncf;
+S      using ::std::truncl;
+S    #endif
+N  #endif
+N
+N#undef __LONGLONG
+N
+N#endif /* __math_h */
+N
+N/* end of math.h */
+L 19 "..\DMP\driver\include\mlmath.h" 2
+N
+N#ifdef WIN32
+S// Microsoft doesn't follow standards
+S#define  round(x)(((double)((long long)((x)>0?(x)+.5:(x)-.5))))
+S#define roundf(x)(((float )((long long)((x)>0?(x)+.5f:(x)-.5f))))
+N#endif
+N
+N#else  // MLMATH
+S
+S#ifdef __cplusplus 
+Sextern "C" {
+S#endif
+S/* MPL needs below functions */
+Sdouble	ml_asin(double);
+Sdouble	ml_atan(double);
+Sdouble	ml_atan2(double, double);
+Sdouble	ml_log(double);
+Sdouble	ml_sqrt(double);
+Sdouble	ml_ceil(double);
+Sdouble	ml_floor(double);
+Sdouble  ml_cos(double);
+Sdouble  ml_sin(double);
+Sdouble  ml_acos(double);
+S#ifdef __cplusplus
+S} // extern "C"
+S#endif
+S
+S/*
+S * We rename functions here to provide the hook for other 
+S * customized math functions.
+S */
+S#define	sqrt(x)      ml_sqrt(x)
+S#define	log(x)       ml_log(x)
+S#define	asin(x)      ml_asin(x)
+S#define	atan(x)      ml_atan(x)
+S#define	atan2(x,y)   ml_atan2(x,y)
+S#define	ceil(x)      ml_ceil(x)
+S#define	floor(x)     ml_floor(x)
+S#define fabs(x)      (((x)<0)?-(x):(x))
+S#define round(x)     (((double)((long long)((x)>0?(x)+.5:(x)-.5))))
+S#define roundf(x)    (((float )((long long)((x)>0?(x)+.5f:(x)-.5f))))
+S#define cos(x)       ml_cos(x)
+S#define sin(x)       ml_sin(x)
+S#define acos(x)      ml_acos(x)
+S
+S#define pow(x,y)     ml_pow(x,y)
+S
+S#ifdef LINUX
+S/* stubs for float version of math functions */
+S#define cosf(x)      ml_cos(x)
+S#define sinf(x)      ml_sin(x)
+S#define atan2f(x,y)  ml_atan2(x,y)
+S#define sqrtf(x)     ml_sqrt(x)
+S#endif
+S
+S
+S
+N#endif // MLMATH
+N
+N#ifndef M_PI
+N#define M_PI 3.14159265358979
+N#endif
+N
+N#ifndef ABS
+N#define ABS(x) (((x)>=0)?(x):-(x))
+N#endif
+N
+N#ifndef MIN
+N#define MIN(x,y) (((x)<(y))?(x):(y))
+N#endif
+N
+N#ifndef MAX
+N#define MAX(x,y) (((x)>(y))?(x):(y))
+N#endif
+N
+N/*---------------------------*/
+N
+N#endif /* !_ML_MATH_H_ */
+N
+L 25 "..\DMP\mllite\ml_math_func.c" 2
+N#include "ml_math_func.h"
+L 1 "..\DMP\mllite\ml_math_func.h" 1
+N/*
+N $License:
+N    Copyright (C) 2011-2012 InvenSense Corporation, All Rights Reserved.
+N    See included License.txt for License information.
+N $
+N */
+N#ifndef INVENSENSE_INV_MATH_FUNC_H__
+N#define INVENSENSE_INV_MATH_FUNC_H__
+N
+N#include "mltypes.h"
+L 1 "..\DMP\driver\include\mltypes.h" 1
+N/*
+N $License:
+N    Copyright (C) 2011 InvenSense Corporation, All Rights Reserved.
+N $
+N */
+N
+N/**
+N *  @defgroup MLERROR
+N *  @brief  Motion Library - Error definitions.
+N *          Definition of the error codes used within the MPL and
+N *          returned to the user.
+N *          Every function tries to return a meaningful error code basing
+N *          on the occuring error condition. The error code is numeric.
+N *
+N *          The available error codes and their associated values are:
+N *          - (0)               INV_SUCCESS
+N *          - (32)              INV_ERROR
+N *          - (22 / EINVAL)     INV_ERROR_INVALID_PARAMETER
+N *          - (1  / EPERM)      INV_ERROR_FEATURE_NOT_ENABLED
+N *          - (36)              INV_ERROR_FEATURE_NOT_IMPLEMENTED
+N *          - (38)              INV_ERROR_DMP_NOT_STARTED
+N *          - (39)              INV_ERROR_DMP_STARTED
+N *          - (40)              INV_ERROR_NOT_OPENED
+N *          - (41)              INV_ERROR_OPENED
+N *          - (19 / ENODEV)     INV_ERROR_INVALID_MODULE
+N *          - (12 / ENOMEM)     INV_ERROR_MEMORY_EXAUSTED
+N *          - (44)              INV_ERROR_DIVIDE_BY_ZERO
+N *          - (45)              INV_ERROR_ASSERTION_FAILURE
+N *          - (46)              INV_ERROR_FILE_OPEN
+N *          - (47)              INV_ERROR_FILE_READ
+N *          - (48)              INV_ERROR_FILE_WRITE
+N *          - (49)              INV_ERROR_INVALID_CONFIGURATION
+N *          - (52)              INV_ERROR_SERIAL_CLOSED
+N *          - (53)              INV_ERROR_SERIAL_OPEN_ERROR
+N *          - (54)              INV_ERROR_SERIAL_READ
+N *          - (55)              INV_ERROR_SERIAL_WRITE
+N *          - (56)              INV_ERROR_SERIAL_DEVICE_NOT_RECOGNIZED
+N *          - (57)              INV_ERROR_SM_TRANSITION
+N *          - (58)              INV_ERROR_SM_IMPROPER_STATE
+N *          - (62)              INV_ERROR_FIFO_OVERFLOW
+N *          - (63)              INV_ERROR_FIFO_FOOTER
+N *          - (64)              INV_ERROR_FIFO_READ_COUNT
+N *          - (65)              INV_ERROR_FIFO_READ_DATA
+N *          - (72)              INV_ERROR_MEMORY_SET
+N *          - (82)              INV_ERROR_LOG_MEMORY_ERROR
+N *          - (83)              INV_ERROR_LOG_OUTPUT_ERROR
+N *          - (92)              INV_ERROR_OS_BAD_PTR
+N *          - (93)              INV_ERROR_OS_BAD_HANDLE
+N *          - (94)              INV_ERROR_OS_CREATE_FAILED
+N *          - (95)              INV_ERROR_OS_LOCK_FAILED
+N *          - (102)             INV_ERROR_COMPASS_DATA_OVERFLOW
+N *          - (103)             INV_ERROR_COMPASS_DATA_UNDERFLOW
+N *          - (104)             INV_ERROR_COMPASS_DATA_NOT_READY
+N *          - (105)             INV_ERROR_COMPASS_DATA_ERROR
+N *          - (107)             INV_ERROR_CALIBRATION_LOAD
+N *          - (108)             INV_ERROR_CALIBRATION_STORE
+N *          - (109)             INV_ERROR_CALIBRATION_LEN
+N *          - (110)             INV_ERROR_CALIBRATION_CHECKSUM
+N *          - (111)             INV_ERROR_ACCEL_DATA_OVERFLOW
+N *          - (112)             INV_ERROR_ACCEL_DATA_UNDERFLOW
+N *          - (113)             INV_ERROR_ACCEL_DATA_NOT_READY
+N *          - (114)             INV_ERROR_ACCEL_DATA_ERROR
+N *
+N *          The available warning codes and their associated values are:
+N *          - (115)             INV_WARNING_MOTION_RACE
+N *          - (116)             INV_WARNING_QUAT_TRASHED
+N *
+N *  @{
+N *      @file mltypes.h
+N *  @}
+N */
+N
+N#ifndef MLTYPES_H
+N#define MLTYPES_H
+N
+N#ifdef __KERNEL__
+S#include <linux/types.h>
+S#include <asm-generic/errno-base.h>
+N#else
+N#include "stdint_invensense.h"
+L 1 "..\DMP\driver\include\stdint_invensense.h" 1
+N/*
+N $License:
+N    Copyright (C) 2011 InvenSense Corporation, All Rights Reserved.
+N $
+N */
+N#ifndef STDINT_INVENSENSE_H
+N#define STDINT_INVENSENSE_H
+N
+N#ifndef WIN32
+N
+N#if defined __KERNEL__
+X#if 0L
+S#include <linux/types.h>
+N#elif defined EMPL
+X#elif 1L
+N#include <stdint.h>
+L 1 "F:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h" 1
+N/* Copyright (C) ARM Ltd., 1999,2014 */
+N/* All rights reserved */
+N
+N/*
+N * RCS $Revision: 185525 $
+N * Checkin $Date: 2014-05-29 12:44:48 +0100 (Thu, 29 May 2014) $
+N * Revising $Author: agrant $
+N */
+N
+N#ifndef __stdint_h
+N#define __stdint_h
+N#define __ARMCLIB_VERSION 5050106
+N
+N  #ifdef __INT64_TYPE__
+S    /* armclang predefines '__INT64_TYPE__' and '__INT64_C_SUFFIX__' */
+S    #define __INT64 __INT64_TYPE__
+N  #else
+N    /* armcc has builtin '__int64' which can be used in --strict mode */
+N    #define __INT64 __int64
+N    #define __INT64_C_SUFFIX__ ll
+N  #endif
+N  #define __PASTE2(x, y) x ## y
+N  #define __PASTE(x, y) __PASTE2(x, y)
+N  #define __INT64_C(x)  __ESCAPE__(__PASTE(x, __INT64_C_SUFFIX__))
+N  #define __UINT64_C(x)  __ESCAPE__(__PASTE(x ## u, __INT64_C_SUFFIX__))
+N  #if defined(__clang__) || (defined(__ARMCC_VERSION) && !defined(__STRICT_ANSI__))
+X  #if 0L || (1L && !0L)
+N    /* armclang and non-strict armcc allow 'long long' in system headers */
+N    #define __LONGLONG long long
+N  #else
+S    /* strict armcc has '__int64' */
+S    #define __LONGLONG __int64
+N  #endif
+N
+N  #ifndef __STDINT_DECLS
+N  #define __STDINT_DECLS
+N
+N    #undef __CLIBNS
+N
+N    #ifdef __cplusplus
+S      namespace std {
+S          #define __CLIBNS std::
+S          extern "C" {
+N    #else
+N      #define __CLIBNS
+N    #endif  /* __cplusplus */
+N
+N
+N/*
+N * 'signed' is redundant below, except for 'signed char' and if
+N * the typedef is used to declare a bitfield.
+N */
+N
+N    /* 7.18.1.1 */
+N
+N    /* exact-width signed integer types */
+Ntypedef   signed          char int8_t;
+Ntypedef   signed short     int int16_t;
+Ntypedef   signed           int int32_t;
+Ntypedef   signed       __INT64 int64_t;
+Xtypedef   signed       __int64 int64_t;
+N
+N    /* exact-width unsigned integer types */
+Ntypedef unsigned          char uint8_t;
+Ntypedef unsigned short     int uint16_t;
+Ntypedef unsigned           int uint32_t;
+Ntypedef unsigned       __INT64 uint64_t;
+Xtypedef unsigned       __int64 uint64_t;
+N
+N    /* 7.18.1.2 */
+N
+N    /* smallest type of at least n bits */
+N    /* minimum-width signed integer types */
+Ntypedef   signed          char int_least8_t;
+Ntypedef   signed short     int int_least16_t;
+Ntypedef   signed           int int_least32_t;
+Ntypedef   signed       __INT64 int_least64_t;
+Xtypedef   signed       __int64 int_least64_t;
+N
+N    /* minimum-width unsigned integer types */
+Ntypedef unsigned          char uint_least8_t;
+Ntypedef unsigned short     int uint_least16_t;
+Ntypedef unsigned           int uint_least32_t;
+Ntypedef unsigned       __INT64 uint_least64_t;
+Xtypedef unsigned       __int64 uint_least64_t;
+N
+N    /* 7.18.1.3 */
+N
+N    /* fastest minimum-width signed integer types */
+Ntypedef   signed           int int_fast8_t;
+Ntypedef   signed           int int_fast16_t;
+Ntypedef   signed           int int_fast32_t;
+Ntypedef   signed       __INT64 int_fast64_t;
+Xtypedef   signed       __int64 int_fast64_t;
+N
+N    /* fastest minimum-width unsigned integer types */
+Ntypedef unsigned           int uint_fast8_t;
+Ntypedef unsigned           int uint_fast16_t;
+Ntypedef unsigned           int uint_fast32_t;
+Ntypedef unsigned       __INT64 uint_fast64_t;
+Xtypedef unsigned       __int64 uint_fast64_t;
+N
+N    /* 7.18.1.4 integer types capable of holding object pointers */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+Stypedef   signed       __INT64 intptr_t;
+Stypedef unsigned       __INT64 uintptr_t;
+N#else
+Ntypedef   signed           int intptr_t;
+Ntypedef unsigned           int uintptr_t;
+N#endif
+N
+N    /* 7.18.1.5 greatest-width integer types */
+Ntypedef   signed     __LONGLONG intmax_t;
+Xtypedef   signed     long long intmax_t;
+Ntypedef unsigned     __LONGLONG uintmax_t;
+Xtypedef unsigned     long long uintmax_t;
+N
+N
+N#if !defined(__cplusplus) || defined(__STDC_LIMIT_MACROS)
+X#if !0L || 0L
+N
+N    /* 7.18.2.1 */
+N
+N    /* minimum values of exact-width signed integer types */
+N#define INT8_MIN                   -128
+N#define INT16_MIN                -32768
+N#define INT32_MIN          (~0x7fffffff)   /* -2147483648 is unsigned */
+N#define INT64_MIN  __INT64_C(~0x7fffffffffffffff) /* -9223372036854775808 is unsigned */
+N
+N    /* maximum values of exact-width signed integer types */
+N#define INT8_MAX                    127
+N#define INT16_MAX                 32767
+N#define INT32_MAX            2147483647
+N#define INT64_MAX  __INT64_C(9223372036854775807)
+N
+N    /* maximum values of exact-width unsigned integer types */
+N#define UINT8_MAX                   255
+N#define UINT16_MAX                65535
+N#define UINT32_MAX           4294967295u
+N#define UINT64_MAX __UINT64_C(18446744073709551615)
+N
+N    /* 7.18.2.2 */
+N
+N    /* minimum values of minimum-width signed integer types */
+N#define INT_LEAST8_MIN                   -128
+N#define INT_LEAST16_MIN                -32768
+N#define INT_LEAST32_MIN          (~0x7fffffff)
+N#define INT_LEAST64_MIN  __INT64_C(~0x7fffffffffffffff)
+N
+N    /* maximum values of minimum-width signed integer types */
+N#define INT_LEAST8_MAX                    127
+N#define INT_LEAST16_MAX                 32767
+N#define INT_LEAST32_MAX            2147483647
+N#define INT_LEAST64_MAX  __INT64_C(9223372036854775807)
+N
+N    /* maximum values of minimum-width unsigned integer types */
+N#define UINT_LEAST8_MAX                   255
+N#define UINT_LEAST16_MAX                65535
+N#define UINT_LEAST32_MAX           4294967295u
+N#define UINT_LEAST64_MAX __UINT64_C(18446744073709551615)
+N
+N    /* 7.18.2.3 */
+N
+N    /* minimum values of fastest minimum-width signed integer types */
+N#define INT_FAST8_MIN           (~0x7fffffff)
+N#define INT_FAST16_MIN          (~0x7fffffff)
+N#define INT_FAST32_MIN          (~0x7fffffff)
+N#define INT_FAST64_MIN  __INT64_C(~0x7fffffffffffffff)
+N
+N    /* maximum values of fastest minimum-width signed integer types */
+N#define INT_FAST8_MAX             2147483647
+N#define INT_FAST16_MAX            2147483647
+N#define INT_FAST32_MAX            2147483647
+N#define INT_FAST64_MAX  __INT64_C(9223372036854775807)
+N
+N    /* maximum values of fastest minimum-width unsigned integer types */
+N#define UINT_FAST8_MAX            4294967295u
+N#define UINT_FAST16_MAX           4294967295u
+N#define UINT_FAST32_MAX           4294967295u
+N#define UINT_FAST64_MAX __UINT64_C(18446744073709551615)
+N
+N    /* 7.18.2.4 */
+N
+N    /* minimum value of pointer-holding signed integer type */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define INTPTR_MIN INT64_MIN
+N#else
+N#define INTPTR_MIN INT32_MIN
+N#endif
+N
+N    /* maximum value of pointer-holding signed integer type */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define INTPTR_MAX INT64_MAX
+N#else
+N#define INTPTR_MAX INT32_MAX
+N#endif
+N
+N    /* maximum value of pointer-holding unsigned integer type */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define UINTPTR_MAX INT64_MAX
+N#else
+N#define UINTPTR_MAX INT32_MAX
+N#endif
+N
+N    /* 7.18.2.5 */
+N
+N    /* minimum value of greatest-width signed integer type */
+N#define INTMAX_MIN  __ESCAPE__(~0x7fffffffffffffffll)
+N
+N    /* maximum value of greatest-width signed integer type */
+N#define INTMAX_MAX  __ESCAPE__(9223372036854775807ll)
+N
+N    /* maximum value of greatest-width unsigned integer type */
+N#define UINTMAX_MAX __ESCAPE__(18446744073709551615ull)
+N
+N    /* 7.18.3 */
+N
+N    /* limits of ptrdiff_t */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define PTRDIFF_MIN INT64_MIN
+S#define PTRDIFF_MAX INT64_MAX
+N#else
+N#define PTRDIFF_MIN INT32_MIN
+N#define PTRDIFF_MAX INT32_MAX
+N#endif
+N
+N    /* limits of sig_atomic_t */
+N#define SIG_ATOMIC_MIN (~0x7fffffff)
+N#define SIG_ATOMIC_MAX   2147483647
+N
+N    /* limit of size_t */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define SIZE_MAX UINT64_MAX
+N#else
+N#define SIZE_MAX UINT32_MAX
+N#endif
+N
+N    /* limits of wchar_t */
+N    /* NB we have to undef and redef because they're defined in both
+N     * stdint.h and wchar.h */
+N#undef WCHAR_MIN
+N#undef WCHAR_MAX
+N
+N#if defined(__WCHAR32) || (defined(__ARM_SIZEOF_WCHAR_T) && __ARM_SIZEOF_WCHAR_T == 4)
+X#if 0L || (0L && __ARM_SIZEOF_WCHAR_T == 4)
+S  #define WCHAR_MIN   0
+S  #define WCHAR_MAX   0xffffffffU
+N#else
+N  #define WCHAR_MIN   0
+N  #define WCHAR_MAX   65535
+N#endif
+N
+N    /* limits of wint_t */
+N#define WINT_MIN (~0x7fffffff)
+N#define WINT_MAX 2147483647
+N
+N#endif /* __STDC_LIMIT_MACROS */
+N
+N#if !defined(__cplusplus) || defined(__STDC_CONSTANT_MACROS)
+X#if !0L || 0L
+N
+N    /* 7.18.4.1 macros for minimum-width integer constants */
+N#define INT8_C(x)   (x)
+N#define INT16_C(x)  (x)
+N#define INT32_C(x)  (x)
+N#define INT64_C(x)  __INT64_C(x)
+N
+N#define UINT8_C(x)  (x ## u)
+N#define UINT16_C(x) (x ## u)
+N#define UINT32_C(x) (x ## u)
+N#define UINT64_C(x) __UINT64_C(x)
+N
+N    /* 7.18.4.2 macros for greatest-width integer constants */
+N#define INTMAX_C(x)  __ESCAPE__(x ## ll)
+N#define UINTMAX_C(x) __ESCAPE__(x ## ull)
+N
+N#endif /* __STDC_CONSTANT_MACROS */
+N
+N    #ifdef __cplusplus
+S         }  /* extern "C" */
+S      }  /* namespace std */
+N    #endif /* __cplusplus */
+N  #endif /* __STDINT_DECLS */
+N
+N  #ifdef __cplusplus
+S    #ifndef __STDINT_NO_EXPORTS
+S      using ::std::int8_t;
+S      using ::std::int16_t;
+S      using ::std::int32_t;
+S      using ::std::int64_t;
+S      using ::std::uint8_t;
+S      using ::std::uint16_t;
+S      using ::std::uint32_t;
+S      using ::std::uint64_t;
+S      using ::std::int_least8_t;
+S      using ::std::int_least16_t;
+S      using ::std::int_least32_t;
+S      using ::std::int_least64_t;
+S      using ::std::uint_least8_t;
+S      using ::std::uint_least16_t;
+S      using ::std::uint_least32_t;
+S      using ::std::uint_least64_t;
+S      using ::std::int_fast8_t;
+S      using ::std::int_fast16_t;
+S      using ::std::int_fast32_t;
+S      using ::std::int_fast64_t;
+S      using ::std::uint_fast8_t;
+S      using ::std::uint_fast16_t;
+S      using ::std::uint_fast32_t;
+S      using ::std::uint_fast64_t;
+S      using ::std::intptr_t;
+S      using ::std::uintptr_t;
+S      using ::std::intmax_t;
+S      using ::std::uintmax_t;
+S    #endif
+N  #endif /* __cplusplus */
+N
+N#undef __INT64
+N#undef __LONGLONG
+N
+N#endif /* __stdint_h */
+N
+N/* end of stdint.h */
+L 15 "..\DMP\driver\include\stdint_invensense.h" 2
+N#include <string.h>
+L 1 "F:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h" 1
+N/* string.h: ANSI 'C' (X3J11 Oct 88) library header, section 4.11 */
+N/* Copyright (C) Codemist Ltd., 1988-1993.                        */
+N/* Copyright 1991-1993 ARM Limited. All rights reserved.          */
+N/* version 0.04 */
+N
+N/*
+N * RCS $Revision: 185525 $
+N * Checkin $Date: 2014-05-29 12:44:48 +0100 (Thu, 29 May 2014) $
+N */
+N
+N/*
+N * string.h declares one type and several functions, and defines one macro
+N * useful for manipulating character arrays and other objects treated as
+N * character arrays. Various methods are used for determining the lengths of
+N * the arrays, but in all cases a char * or void * argument points to the
+N * initial (lowest addresses) character of the array. If an array is written
+N * beyond the end of an object, the behaviour is undefined.
+N */
+N
+N#ifndef __string_h
+N#define __string_h
+N#define __ARMCLIB_VERSION 5050106
+N
+N#define _ARMABI __declspec(__nothrow)
+N
+N  #ifndef __STRING_DECLS
+N  #define __STRING_DECLS
+N
+N    #undef __CLIBNS
+N
+N    #ifdef __cplusplus
+S        namespace std {
+S        #define __CLIBNS std::
+S        extern "C" {
+N    #else
+N      #define __CLIBNS
+N    #endif  /* __cplusplus */
+N
+N#if defined(__cplusplus) || !defined(__STRICT_ANSI__)
+X#if 0L || !0L
+N /* unconditional in C++ and non-strict C for consistency of debug info */
+N  #if __sizeof_ptr == 8
+X  #if 4 == 8
+S    typedef unsigned long size_t;   /* see <stddef.h> */
+N  #else
+N    typedef unsigned int size_t;   /* see <stddef.h> */
+N  #endif
+N#elif !defined(__size_t)
+S  #define __size_t 1
+S  #if __sizeof_ptr == 8
+S    typedef unsigned long size_t;   /* see <stddef.h> */
+S  #else
+S    typedef unsigned int size_t;   /* see <stddef.h> */
+S  #endif
+N#endif
+N
+N#undef NULL
+N#define NULL 0                   /* see <stddef.h> */
+N
+Nextern _ARMABI void *memcpy(void * __restrict /*s1*/,
+Xextern __declspec(__nothrow) void *memcpy(void * __restrict  ,
+N                    const void * __restrict /*s2*/, size_t /*n*/) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * copies n characters from the object pointed to by s2 into the object
+N    * pointed to by s1. If copying takes place between objects that overlap,
+N    * the behaviour is undefined.
+N    * Returns: the value of s1.
+N    */
+Nextern _ARMABI void *memmove(void * /*s1*/,
+Xextern __declspec(__nothrow) void *memmove(void *  ,
+N                    const void * /*s2*/, size_t /*n*/) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * copies n characters from the object pointed to by s2 into the object
+N    * pointed to by s1. Copying takes place as if the n characters from the
+N    * object pointed to by s2 are first copied into a temporary array of n
+N    * characters that does not overlap the objects pointed to by s1 and s2,
+N    * and then the n characters from the temporary array are copied into the
+N    * object pointed to by s1.
+N    * Returns: the value of s1.
+N    */
+Nextern _ARMABI char *strcpy(char * __restrict /*s1*/, const char * __restrict /*s2*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) char *strcpy(char * __restrict  , const char * __restrict  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * copies the string pointed to by s2 (including the terminating nul
+N    * character) into the array pointed to by s1. If copying takes place
+N    * between objects that overlap, the behaviour is undefined.
+N    * Returns: the value of s1.
+N    */
+Nextern _ARMABI char *strncpy(char * __restrict /*s1*/, const char * __restrict /*s2*/, size_t /*n*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) char *strncpy(char * __restrict  , const char * __restrict  , size_t  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * copies not more than n characters (characters that follow a null
+N    * character are not copied) from the array pointed to by s2 into the array
+N    * pointed to by s1. If copying takes place between objects that overlap,
+N    * the behaviour is undefined.
+N    * Returns: the value of s1.
+N    */
+N
+Nextern _ARMABI char *strcat(char * __restrict /*s1*/, const char * __restrict /*s2*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) char *strcat(char * __restrict  , const char * __restrict  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * appends a copy of the string pointed to by s2 (including the terminating
+N    * null character) to the end of the string pointed to by s1. The initial
+N    * character of s2 overwrites the null character at the end of s1.
+N    * Returns: the value of s1.
+N    */
+Nextern _ARMABI char *strncat(char * __restrict /*s1*/, const char * __restrict /*s2*/, size_t /*n*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) char *strncat(char * __restrict  , const char * __restrict  , size_t  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * appends not more than n characters (a null character and characters that
+N    * follow it are not appended) from the array pointed to by s2 to the end of
+N    * the string pointed to by s1. The initial character of s2 overwrites the
+N    * null character at the end of s1. A terminating null character is always
+N    * appended to the result.
+N    * Returns: the value of s1.
+N    */
+N
+N/*
+N * The sign of a nonzero value returned by the comparison functions is
+N * determined by the sign of the difference between the values of the first
+N * pair of characters (both interpreted as unsigned char) that differ in the
+N * objects being compared.
+N */
+N
+Nextern _ARMABI int memcmp(const void * /*s1*/, const void * /*s2*/, size_t /*n*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int memcmp(const void *  , const void *  , size_t  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * compares the first n characters of the object pointed to by s1 to the
+N    * first n characters of the object pointed to by s2.
+N    * Returns: an integer greater than, equal to, or less than zero, according
+N    *          as the object pointed to by s1 is greater than, equal to, or
+N    *          less than the object pointed to by s2.
+N    */
+Nextern _ARMABI int strcmp(const char * /*s1*/, const char * /*s2*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int strcmp(const char *  , const char *  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * compares the string pointed to by s1 to the string pointed to by s2.
+N    * Returns: an integer greater than, equal to, or less than zero, according
+N    *          as the string pointed to by s1 is greater than, equal to, or
+N    *          less than the string pointed to by s2.
+N    */
+Nextern _ARMABI int strncmp(const char * /*s1*/, const char * /*s2*/, size_t /*n*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int strncmp(const char *  , const char *  , size_t  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * compares not more than n characters (characters that follow a null
+N    * character are not compared) from the array pointed to by s1 to the array
+N    * pointed to by s2.
+N    * Returns: an integer greater than, equal to, or less than zero, according
+N    *          as the string pointed to by s1 is greater than, equal to, or
+N    *          less than the string pointed to by s2.
+N    */
+Nextern _ARMABI int strcasecmp(const char * /*s1*/, const char * /*s2*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int strcasecmp(const char *  , const char *  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * compares the string pointed to by s1 to the string pointed to by s2,
+N    * case-insensitively as defined by the current locale.
+N    * Returns: an integer greater than, equal to, or less than zero, according
+N    *          as the string pointed to by s1 is greater than, equal to, or
+N    *          less than the string pointed to by s2.
+N    */
+Nextern _ARMABI int strncasecmp(const char * /*s1*/, const char * /*s2*/, size_t /*n*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int strncasecmp(const char *  , const char *  , size_t  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * compares not more than n characters (characters that follow a null
+N    * character are not compared) from the array pointed to by s1 to the array
+N    * pointed to by s2, case-insensitively as defined by the current locale.
+N    * Returns: an integer greater than, equal to, or less than zero, according
+N    *          as the string pointed to by s1 is greater than, equal to, or
+N    *          less than the string pointed to by s2.
+N    */
+Nextern _ARMABI int strcoll(const char * /*s1*/, const char * /*s2*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int strcoll(const char *  , const char *  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * compares the string pointed to by s1 to the string pointed to by s2, both
+N    * interpreted as appropriate to the LC_COLLATE category of the current
+N    * locale.
+N    * Returns: an integer greater than, equal to, or less than zero, according
+N    *          as the string pointed to by s1 is greater than, equal to, or
+N    *          less than the string pointed to by s2 when both are interpreted
+N    *          as appropriate to the current locale.
+N    */
+N
+Nextern _ARMABI size_t strxfrm(char * __restrict /*s1*/, const char * __restrict /*s2*/, size_t /*n*/) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) size_t strxfrm(char * __restrict  , const char * __restrict  , size_t  ) __attribute__((__nonnull__(2)));
+N   /*
+N    * transforms the string pointed to by s2 and places the resulting string
+N    * into the array pointed to by s1. The transformation function is such that
+N    * if the strcmp function is applied to two transformed strings, it returns
+N    * a value greater than, equal to or less than zero, corresponding to the
+N    * result of the strcoll function applied to the same two original strings.
+N    * No more than n characters are placed into the resulting array pointed to
+N    * by s1, including the terminating null character. If n is zero, s1 is
+N    * permitted to be a null pointer. If copying takes place between objects
+N    * that overlap, the behaviour is undefined.
+N    * Returns: The length of the transformed string is returned (not including
+N    *          the terminating null character). If the value returned is n or
+N    *          more, the contents of the array pointed to by s1 are
+N    *          indeterminate.
+N    */
+N
+N
+N#ifdef __cplusplus
+Sextern _ARMABI const void *memchr(const void * /*s*/, int /*c*/, size_t /*n*/) __attribute__((__nonnull__(1)));
+Sextern "C++" void *memchr(void * __s, int __c, size_t __n) __attribute__((__nonnull__(1)));
+Sextern "C++" inline void *memchr(void * __s, int __c, size_t __n)
+S    { return const_cast<void *>(memchr(const_cast<const void *>(__s), __c, __n)); }
+N#else
+Nextern _ARMABI void *memchr(const void * /*s*/, int /*c*/, size_t /*n*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) void *memchr(const void *  , int  , size_t  ) __attribute__((__nonnull__(1)));
+N#endif
+N   /*
+N    * locates the first occurence of c (converted to an unsigned char) in the
+N    * initial n characters (each interpreted as unsigned char) of the object
+N    * pointed to by s.
+N    * Returns: a pointer to the located character, or a null pointer if the
+N    *          character does not occur in the object.
+N    */
+N
+N#ifdef __cplusplus
+Sextern _ARMABI const char *strchr(const char * /*s*/, int /*c*/) __attribute__((__nonnull__(1)));
+Sextern "C++" char *strchr(char * __s, int __c) __attribute__((__nonnull__(1)));
+Sextern "C++" inline char *strchr(char * __s, int __c)
+S    { return const_cast<char *>(strchr(const_cast<const char *>(__s), __c)); }
+N#else
+Nextern _ARMABI char *strchr(const char * /*s*/, int /*c*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) char *strchr(const char *  , int  ) __attribute__((__nonnull__(1)));
+N#endif
+N   /*
+N    * locates the first occurence of c (converted to an char) in the string
+N    * pointed to by s (including the terminating null character).
+N    * Returns: a pointer to the located character, or a null pointer if the
+N    *          character does not occur in the string.
+N    */
+N
+Nextern _ARMABI size_t strcspn(const char * /*s1*/, const char * /*s2*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) size_t strcspn(const char *  , const char *  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * computes the length of the initial segment of the string pointed to by s1
+N    * which consists entirely of characters not from the string pointed to by
+N    * s2. The terminating null character is not considered part of s2.
+N    * Returns: the length of the segment.
+N    */
+N
+N#ifdef __cplusplus
+Sextern _ARMABI const char *strpbrk(const char * /*s1*/, const char * /*s2*/) __attribute__((__nonnull__(1,2)));
+Sextern "C++" char *strpbrk(char * __s1, const char * __s2) __attribute__((__nonnull__(1,2)));
+Sextern "C++" inline char *strpbrk(char * __s1, const char * __s2)
+S    { return const_cast<char *>(strpbrk(const_cast<const char *>(__s1), __s2)); }
+N#else
+Nextern _ARMABI char *strpbrk(const char * /*s1*/, const char * /*s2*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) char *strpbrk(const char *  , const char *  ) __attribute__((__nonnull__(1,2)));
+N#endif
+N   /*
+N    * locates the first occurence in the string pointed to by s1 of any
+N    * character from the string pointed to by s2.
+N    * Returns: returns a pointer to the character, or a null pointer if no
+N    *          character form s2 occurs in s1.
+N    */
+N
+N#ifdef __cplusplus
+Sextern _ARMABI const char *strrchr(const char * /*s*/, int /*c*/) __attribute__((__nonnull__(1)));
+Sextern "C++" char *strrchr(char * __s, int __c) __attribute__((__nonnull__(1)));
+Sextern "C++" inline char *strrchr(char * __s, int __c)
+S    { return const_cast<char *>(strrchr(const_cast<const char *>(__s), __c)); }
+N#else
+Nextern _ARMABI char *strrchr(const char * /*s*/, int /*c*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) char *strrchr(const char *  , int  ) __attribute__((__nonnull__(1)));
+N#endif
+N   /*
+N    * locates the last occurence of c (converted to a char) in the string
+N    * pointed to by s. The terminating null character is considered part of
+N    * the string.
+N    * Returns: returns a pointer to the character, or a null pointer if c does
+N    *          not occur in the string.
+N    */
+N
+Nextern _ARMABI size_t strspn(const char * /*s1*/, const char * /*s2*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) size_t strspn(const char *  , const char *  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * computes the length of the initial segment of the string pointed to by s1
+N    * which consists entirely of characters from the string pointed to by S2
+N    * Returns: the length of the segment.
+N    */
+N
+N#ifdef __cplusplus
+Sextern _ARMABI const char *strstr(const char * /*s1*/, const char * /*s2*/) __attribute__((__nonnull__(1,2)));
+Sextern "C++" char *strstr(char * __s1, const char * __s2) __attribute__((__nonnull__(1,2)));
+Sextern "C++" inline char *strstr(char * __s1, const char * __s2)
+S    { return const_cast<char *>(strstr(const_cast<const char *>(__s1), __s2)); }
+N#else
+Nextern _ARMABI char *strstr(const char * /*s1*/, const char * /*s2*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) char *strstr(const char *  , const char *  ) __attribute__((__nonnull__(1,2)));
+N#endif
+N   /*
+N    * locates the first occurence in the string pointed to by s1 of the
+N    * sequence of characters (excluding the terminating null character) in the
+N    * string pointed to by s2.
+N    * Returns: a pointer to the located string, or a null pointer if the string
+N    *          is not found.
+N    */
+N
+Nextern _ARMABI char *strtok(char * __restrict /*s1*/, const char * __restrict /*s2*/) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) char *strtok(char * __restrict  , const char * __restrict  ) __attribute__((__nonnull__(2)));
+Nextern _ARMABI char *_strtok_r(char * /*s1*/, const char * /*s2*/, char ** /*ptr*/) __attribute__((__nonnull__(2,3)));
+Xextern __declspec(__nothrow) char *_strtok_r(char *  , const char *  , char **  ) __attribute__((__nonnull__(2,3)));
+N#ifndef __STRICT_ANSI__
+Nextern _ARMABI char *strtok_r(char * /*s1*/, const char * /*s2*/, char ** /*ptr*/) __attribute__((__nonnull__(2,3)));
+Xextern __declspec(__nothrow) char *strtok_r(char *  , const char *  , char **  ) __attribute__((__nonnull__(2,3)));
+N#endif
+N   /*
+N    * A sequence of calls to the strtok function breaks the string pointed to
+N    * by s1 into a sequence of tokens, each of which is delimited by a
+N    * character from the string pointed to by s2. The first call in the
+N    * sequence has s1 as its first argument, and is followed by calls with a
+N    * null pointer as their first argument. The separator string pointed to by
+N    * s2 may be different from call to call.
+N    * The first call in the sequence searches for the first character that is
+N    * not contained in the current separator string s2. If no such character
+N    * is found, then there are no tokens in s1 and the strtok function returns
+N    * a null pointer. If such a character is found, it is the start of the
+N    * first token.
+N    * The strtok function then searches from there for a character that is
+N    * contained in the current separator string. If no such character is found,
+N    * the current token extends to the end of the string pointed to by s1, and
+N    * subsequent searches for a token will fail. If such a character is found,
+N    * it is overwritten by a null character, which terminates the current
+N    * token. The strtok function saves a pointer to the following character,
+N    * from which the next search for a token will start.
+N    * Each subsequent call, with a null pointer as the value for the first
+N    * argument, starts searching from the saved pointer and behaves as
+N    * described above.
+N    * Returns: pointer to the first character of a token, or a null pointer if
+N    *          there is no token.
+N    *
+N    * strtok_r() is a common extension which works exactly like
+N    * strtok(), but instead of storing its state in a hidden
+N    * library variable, requires the user to pass in a pointer to a
+N    * char * variable which will be used instead. Any sequence of
+N    * calls to strtok_r() passing the same char ** pointer should
+N    * behave exactly like the corresponding sequence of calls to
+N    * strtok(). This means that strtok_r() can safely be used in
+N    * multi-threaded programs, and also that you can tokenise two
+N    * strings in parallel.
+N    */
+N
+Nextern _ARMABI void *memset(void * /*s*/, int /*c*/, size_t /*n*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) void *memset(void *  , int  , size_t  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * copies the value of c (converted to an unsigned char) into each of the
+N    * first n charactes of the object pointed to by s.
+N    * Returns: the value of s.
+N    */
+Nextern _ARMABI char *strerror(int /*errnum*/);
+Xextern __declspec(__nothrow) char *strerror(int  );
+N   /*
+N    * maps the error number in errnum to an error message string.
+N    * Returns: a pointer to the string, the contents of which are
+N    *          implementation-defined. The array pointed to shall not be
+N    *          modified by the program, but may be overwritten by a
+N    *          subsequent call to the strerror function.
+N    */
+Nextern _ARMABI size_t strlen(const char * /*s*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) size_t strlen(const char *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * computes the length of the string pointed to by s.
+N    * Returns: the number of characters that precede the terminating null
+N    *          character.
+N    */
+N
+Nextern _ARMABI size_t strlcpy(char * /*dst*/, const char * /*src*/, size_t /*len*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) size_t strlcpy(char *  , const char *  , size_t  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * copies the string src into the string dst, using no more than
+N    * len bytes of dst. Always null-terminates dst _within the
+N    * length len (i.e. will copy at most len-1 bytes of string plus
+N    * a NUL), unless len is actually zero.
+N    * 
+N    * Return value is the length of the string that _would_ have
+N    * been written, i.e. the length of src. Thus, the operation
+N    * succeeded without truncation if and only if ret < len;
+N    * otherwise, the value in ret tells you how big to make dst if
+N    * you decide to reallocate it. (That value does _not_ include
+N    * the NUL.)
+N    * 
+N    * This is a BSD-derived library extension, which we are
+N    * permitted to declare in a standard header because ISO defines
+N    * function names beginning with 'str' as reserved for future
+N    * expansion of <string.h>.
+N    */
+N
+Nextern _ARMABI size_t strlcat(char * /*dst*/, const char * /*src*/, size_t /*len*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) size_t strlcat(char *  , const char *  , size_t  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * concatenates the string src to the string dst, using no more
+N    * than len bytes of dst. Always null-terminates dst _within the
+N    * length len (i.e. will copy at most len-1 bytes of string plus
+N    * a NUL), unless len is actually zero.
+N    * 
+N    * Return value is the length of the string that _would_ have
+N    * been written, i.e. the length of src plus the original length
+N    * of dst. Thus, the operation succeeded without truncation if
+N    * and only if ret < len; otherwise, the value in ret tells you
+N    * how big to make dst if you decide to reallocate it. (That
+N    * value does _not_ include the NUL.)
+N    * 
+N    * If no NUL is encountered within the first len bytes of dst,
+N    * then the length of dst is considered to have been equal to
+N    * len for the purposes of the return value (as if there were a
+N    * NUL at dst[len]). Thus, the return value in this case is len
+N    * + strlen(src).
+N    * 
+N    * This is a BSD-derived library extension, which we are
+N    * permitted to declare in a standard header because ISO defines
+N    * function names beginning with 'str' as reserved for future
+N    * expansion of <string.h>.
+N    */
+N
+Nextern _ARMABI void _membitcpybl(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitcpybl(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI void _membitcpybb(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitcpybb(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI void _membitcpyhl(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitcpyhl(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI void _membitcpyhb(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitcpyhb(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI void _membitcpywl(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitcpywl(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI void _membitcpywb(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitcpywb(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI void _membitmovebl(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitmovebl(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI void _membitmovebb(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitmovebb(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI void _membitmovehl(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitmovehl(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI void _membitmovehb(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitmovehb(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI void _membitmovewl(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitmovewl(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI void _membitmovewb(void * /*dest*/, const void * /*src*/, int /*destoffset*/, int /*srcoffset*/, size_t /*nbits*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) void _membitmovewb(void *  , const void *  , int  , int  , size_t  ) __attribute__((__nonnull__(1,2)));
+N    /*
+N     * Copies or moves a piece of memory from one place to another,
+N     * with one-bit granularity. So you can start or finish a copy
+N     * part way through a byte, and you can copy between regions
+N     * with different alignment within a byte.
+N     * 
+N     * All these functions have the same prototype: two void *
+N     * pointers for destination and source, then two integers
+N     * giving the bit offset from those pointers, and finally the
+N     * number of bits to copy.
+N     * 
+N     * Just like memcpy and memmove, the "cpy" functions copy as
+N     * fast as they can in the assumption that the memory regions
+N     * do not overlap, while the "move" functions cope correctly
+N     * with overlap.
+N     *
+N     * Treating memory as a stream of individual bits requires
+N     * defining a convention about what order those bits are
+N     * considered to be arranged in. The above functions support
+N     * multiple conventions:
+N     * 
+N     *  - the "bl" functions consider the unit of memory to be the
+N     *    byte, and consider the bits within each byte to be
+N     *    arranged in little-endian fashion, so that the LSB comes
+N     *    first. (For example, membitcpybl(a,b,0,7,1) would copy
+N     *    the MSB of the byte at b to the LSB of the byte at a.)
+N     * 
+N     *  - the "bb" functions consider the unit of memory to be the
+N     *    byte, and consider the bits within each byte to be
+N     *    arranged in big-endian fashion, so that the MSB comes
+N     *    first.
+N     * 
+N     *  - the "hl" functions consider the unit of memory to be the
+N     *    16-bit halfword, and consider the bits within each word
+N     *    to be arranged in little-endian fashion.
+N     * 
+N     *  - the "hb" functions consider the unit of memory to be the
+N     *    16-bit halfword, and consider the bits within each word
+N     *    to be arranged in big-endian fashion.
+N     * 
+N     *  - the "wl" functions consider the unit of memory to be the
+N     *    32-bit word, and consider the bits within each word to be
+N     *    arranged in little-endian fashion.
+N     * 
+N     *  - the "wb" functions consider the unit of memory to be the
+N     *    32-bit word, and consider the bits within each word to be
+N     *    arranged in big-endian fashion.
+N     */
+N
+N    #ifdef __cplusplus
+S         }  /* extern "C" */
+S      }  /* namespace std */
+N    #endif /* __cplusplus */
+N  #endif /* __STRING_DECLS */
+N
+N  #ifdef __cplusplus
+S    #ifndef __STRING_NO_EXPORTS
+S      using ::std::size_t;
+S      using ::std::memcpy;
+S      using ::std::memmove;
+S      using ::std::strcpy;
+S      using ::std::strncpy;
+S      using ::std::strcat;
+S      using ::std::strncat;
+S      using ::std::memcmp;
+S      using ::std::strcmp;
+S      using ::std::strncmp;
+S      using ::std::strcasecmp;
+S      using ::std::strncasecmp;
+S      using ::std::strcoll;
+S      using ::std::strxfrm;
+S      using ::std::memchr;
+S      using ::std::strchr;
+S      using ::std::strcspn;
+S      using ::std::strpbrk;
+S      using ::std::strrchr;
+S      using ::std::strspn;
+S      using ::std::strstr;
+S      using ::std::strtok;
+S#ifndef __STRICT_ANSI__
+S      using ::std::strtok_r;
+S#endif
+S      using ::std::_strtok_r;
+S      using ::std::memset;
+S      using ::std::strerror;
+S      using ::std::strlen;
+S      using ::std::strlcpy;
+S      using ::std::strlcat;
+S      using ::std::_membitcpybl;
+S      using ::std::_membitcpybb;
+S      using ::std::_membitcpyhl;
+S      using ::std::_membitcpyhb;
+S      using ::std::_membitcpywl;
+S      using ::std::_membitcpywb;
+S      using ::std::_membitmovebl;
+S      using ::std::_membitmovebb;
+S      using ::std::_membitmovehl;
+S      using ::std::_membitmovehb;
+S      using ::std::_membitmovewl;
+S      using ::std::_membitmovewb;
+S    #endif /* __STRING_NO_EXPORTS */
+N  #endif /* __cplusplus */
+N
+N#endif
+N
+N/* end of string.h */
+N
+L 16 "..\DMP\driver\include\stdint_invensense.h" 2
+N#else
+S#include <stdint.h>
+N#endif
+N
+N#else
+S
+S#include <windows.h>
+S
+Stypedef signed char int8_t;
+Stypedef short int16_t;
+Stypedef long int32_t;
+Stypedef long long int64_t;
+S
+Stypedef unsigned char uint8_t;
+Stypedef unsigned short uint16_t;
+Stypedef unsigned long uint32_t;
+Stypedef unsigned long long uint64_t;
+S
+Stypedef int int_fast8_t;
+Stypedef int int_fast16_t;
+Stypedef long int_fast32_t;
+S
+Stypedef unsigned int uint_fast8_t;
+Stypedef unsigned int uint_fast16_t;
+Stypedef unsigned long uint_fast32_t;
+S
+N#endif
+N
+N#endif // STDINT_INVENSENSE_H
+L 81 "..\DMP\driver\include\mltypes.h" 2
+N#include <errno.h>
+L 1 "F:\Keil_v5\ARM\ARMCC\Bin\..\include\errno.h" 1
+N/* errno.h: ANSI 'C' (X3J11 Oct 88) library header, section 4.1.3 */
+N/* Copyright (C) Codemist Ltd., 1988                            */
+N/* Copyright 1991 ARM Limited. All rights reserved.             */
+N/* version 1 */
+N
+N/*
+N * RCS $Revision: 179217 $
+N * Checkin $Date: 2013-03-12 14:03:19 +0000 (Tue, 12 Mar 2013) $
+N * Revising $Author: drodgman $
+N */
+N
+N#ifndef __errno_h
+N#define __errno_h
+N#define __ARMCLIB_VERSION 5050106
+N
+N#define _ARMABI_PURE __declspec(__nothrow) __attribute__((const))
+N
+N  #ifndef __ERRNO_DECLS
+N  #define __ERRNO_DECLS
+N
+N    #undef __CLIBNS
+N
+N    #ifdef __cplusplus
+S        namespace std {
+S        #define __CLIBNS std::
+S        extern "C" {
+N    #else
+N      #define __CLIBNS
+N    #endif  /* __cplusplus */
+N
+N
+Nextern _ARMABI_PURE volatile int *__aeabi_errno_addr(void);
+Xextern __declspec(__nothrow) __attribute__((const)) volatile int *__aeabi_errno_addr(void);
+N
+N
+N    #ifdef __cplusplus
+S         }  /* extern "C" */
+S      }  /* namespace std */
+N    #endif /* __cplusplus */
+N  #endif /* __ERRNO_DECLS */
+N
+N  #ifdef __cplusplus
+S    #ifndef __ERRNO_NO_EXPORTS
+S      using ::std::__aeabi_errno_addr;
+S    #endif /* __ERRNO_NO_EXPORTS */
+N  #endif /* __cplusplus */
+N
+N#define errno (*__CLIBNS __aeabi_errno_addr())
+N/*
+N * expands to a modifiable lvalue that has type volatile int, the value of
+N * which is set to a positive error code by several library functions. It is
+N * initialised to zero at program startup, but is never set to zero by any
+N * library function. The value of errno may be set to nonzero by a library
+N * function call whether or not there is an error, provided the use of errno
+N * is not documented in the description of the function in the Standard.
+N */
+N
+N
+N/*
+N * Error numbers defined in the C standard need the ABI portability
+N * mechanism.
+N */
+N#if _AEABI_PORTABILITY_LEVEL != 0 && !defined _AEABI_PORTABLE
+X#if _AEABI_PORTABILITY_LEVEL != 0 && !0L
+S  #define _AEABI_PORTABLE
+N#endif
+N
+N/* The ABI-defined signal numbers (EDOM, ERANGE and EILSEQ) are
+N * defined differently depending on ABI conformance level. */
+N#if _AEABI_PORTABILITY_LEVEL != 0 || (!defined _AEABI_PORTABILITY_LEVEL && __DEFAULT_AEABI_PORTABILITY_LEVEL != 0)
+X#if _AEABI_PORTABILITY_LEVEL != 0 || (!0L && __DEFAULT_AEABI_PORTABILITY_LEVEL != 0)
+Sextern const int __aeabi_EDOM;
+Sextern const int __aeabi_ERANGE;
+Sextern const int __aeabi_EILSEQ;
+S#define EDOM (__aeabi_EDOM)
+S#define ERANGE (__aeabi_ERANGE)
+S#define EILSEQ (__aeabi_EILSEQ)
+N#else
+N
+N#define EDOM    1
+N/*
+N * If a mathematical function suffers a domain error (an input
+N * argument is outside the domain over which the mathematical
+N * function is defined, e.g. log of a negative number) the integer
+N * expression errno acquires the value of the macro EDOM.
+N *
+N * EDOM is also returned by ftell, fgetpos and fsetpos when they
+N * fail.
+N */
+N
+N#define ERANGE 2
+N/*
+N * If a mathematical function suffers a range error (the result of
+N * the function is too large or too small to be accurately
+N * represented in the output floating-point format), the integer
+N * expression errno acquires the value of the macro ERANGE.
+N *
+N * ERANGE is used by functions in math.h and complex.h, and also by
+N * the strto* and wcsto* family of decimal-to-binary conversion
+N * functions (both floating and integer) and by floating-point
+N * conversions in scanf.
+N */
+N
+N#define EILSEQ  4
+N/*
+N * EILSEQ is generated by the restartable multi-byte character
+N * processing routines to indicate an encoding error: that is, it is
+N * generated by mbrtowc, wcrtomb, mbsrtowcs and wcsrtombs, but not
+N * by mbtowc, wctomb, mbstowcs or wcsrtombs.
+N *
+N * It is also generated by the wide-character stdio functions:
+N * fputwc, putwc, putwchar, fputws, fgetwc, getwc, getwchar, fgetws.
+N */
+N
+N#endif /* end of conditional definition of ABI-defined signals */
+N
+N#define ESIGNUM 3
+N/*
+N * ESIGNUM is generated by signal() if the user attempts to change
+N * the handling of a nonexistent signal. ESIGNUM is not part of the
+N * ANSI C standard.
+N */
+N
+N#define EINVAL  5
+N#define ENOMEM  6
+N/*
+N * EINVAL and ENOMEM can be generated by posix_memalign().
+N */
+N
+N#endif
+N
+N/* end of errno.h */
+N
+L 82 "..\DMP\driver\include\mltypes.h" 2
+N#endif
+N#include <limits.h>
+L 1 "F:\Keil_v5\ARM\ARMCC\Bin\..\include\limits.h" 1
+N/* limits.h: ANSI 'C' (X3J11 Oct 88) library header, section 2.2.4.2 */
+N/* Copyright (C) Codemist Ltd., 1988                            */
+N/* Copyright 1991-1997 ARM Limited. All rights reserved         */
+N
+N/*
+N * RCS $Revision: 185525 $
+N * Checkin $Date: 2014-05-29 12:44:48 +0100 (Thu, 29 May 2014) $
+N * Revising $Author: drodgman $
+N */
+N
+N#ifndef __limits_h
+N#define __limits_h
+N#define __ARMCLIB_VERSION 5050106
+N
+N#define CHAR_BIT 8
+N    /* max number of bits for smallest object that is not a bit-field (byte) */
+N#define SCHAR_MIN (-128)
+N    /* mimimum value for an object of type signed char */
+N#define SCHAR_MAX 127
+N    /* maximum value for an object of type signed char */
+N#define UCHAR_MAX 255
+N    /* maximum value for an object of type unsigned char */
+N#ifdef __FEATURE_SIGNED_CHAR
+S  #define CHAR_MIN (-128)
+S      /* minimum value for an object of type char */
+S  #define CHAR_MAX 127
+S      /* maximum value for an object of type char */
+N#else
+N  #define CHAR_MIN 0
+N      /* minimum value for an object of type char */
+N  #define CHAR_MAX 255
+N      /* maximum value for an object of type char */
+N#endif
+N
+N#if _AEABI_PORTABILITY_LEVEL != 0 && !defined _AEABI_PORTABLE
+X#if _AEABI_PORTABILITY_LEVEL != 0 && !0L
+S  #define _AEABI_PORTABLE
+N#endif
+N
+N#if _AEABI_PORTABILITY_LEVEL != 0 || (!defined _AEABI_PORTABILITY_LEVEL && __DEFAULT_AEABI_PORTABILITY_LEVEL != 0)
+X#if _AEABI_PORTABILITY_LEVEL != 0 || (!0L && __DEFAULT_AEABI_PORTABILITY_LEVEL != 0)
+Sextern const int __aeabi_MB_LEN_MAX;
+S#define MB_LEN_MAX (__aeabi_MB_LEN_MAX)
+N#else
+N#define MB_LEN_MAX 6
+N#endif
+N    /* maximum number of bytes in a multibyte character, */
+N    /* for any supported locale */
+N
+N#define SHRT_MIN  (-0x8000)
+N    /* minimum value for an object of type short int */
+N#define SHRT_MAX  0x7fff
+N    /* maximum value for an object of type short int */
+N#define USHRT_MAX 65535
+N    /* maximum value for an object of type unsigned short int */
+N#define INT_MIN   (~0x7fffffff)  /* -2147483648 and 0x80000000 are unsigned */
+N    /* minimum value for an object of type int */
+N#define INT_MAX   0x7fffffff
+N    /* maximum value for an object of type int */
+N#define UINT_MAX  0xffffffffU
+N    /* maximum value for an object of type unsigned int */
+N#if __sizeof_long == 8
+X#if 4 == 8
+S  #define LONG_MIN  (~0x7fffffffffffffffL)
+N#else
+N  #define LONG_MIN  (~0x7fffffffL)
+N#endif
+N    /* minimum value for an object of type long int */
+N#if __sizeof_long == 8
+X#if 4 == 8
+S  #define LONG_MAX  0x7fffffffffffffffL
+N#else
+N  #define LONG_MAX  0x7fffffffL
+N#endif
+N    /* maximum value for an object of type long int */
+N#if __sizeof_long == 8
+X#if 4 == 8
+S  #define ULONG_MAX 0xffffffffffffffffUL
+N#else
+N  #define ULONG_MAX 0xffffffffUL
+N#endif
+N    /* maximum value for an object of type unsigned long int */
+N#if !defined(__STRICT_ANSI__) || (defined(__STDC_VERSION__) && 199901L <= __STDC_VERSION__)
+X#if !0L || (1L && 199901L <= 199901L)
+N  #define LLONG_MIN  (~0x7fffffffffffffffLL)
+N      /* minimum value for an object of type long long int */
+N  #define LLONG_MAX    0x7fffffffffffffffLL
+N      /* maximum value for an object of type long long int */
+N  #define ULLONG_MAX   0xffffffffffffffffULL
+N      /* maximum value for an object of type unsigned long int */
+N#endif
+N
+N#endif
+N
+N/* end of limits.h */
+N
+L 84 "..\DMP\driver\include\mltypes.h" 2
+N
+N#ifndef REMOVE_INV_ERROR_T
+N/*---------------------------
+N *    ML Types
+N *--------------------------*/
+N
+N/**
+N *  @struct inv_error_t mltypes.h "mltypes"
+N *  @brief  The MPL Error Code return type.
+N *
+N *  @code
+N *      typedef unsigned char inv_error_t;
+N *  @endcode
+N */
+N//typedef unsigned char inv_error_t;
+Ntypedef int inv_error_t;
+N#endif
+N
+N#if defined EMPL
+X#if 1L
+Ntypedef unsigned long inv_time_t;
+N#else
+Stypedef unsigned long long inv_time_t;
+N#endif
+N
+N#if defined EMPL || (!defined __GNUC__ && !defined __KERNEL__)
+X#if 1L || (!0L && !0L)
+Ntypedef int8_t   __s8;
+Ntypedef int16_t  __s16;
+Ntypedef int32_t  __s32;
+N
+Ntypedef uint8_t   __u8;
+Ntypedef uint16_t  __u16;
+Ntypedef uint32_t  __u32;
+N
+N#ifndef EMPL_NO_64BIT
+Ntypedef int64_t  __s64;
+Ntypedef uint64_t  __u64;
+N#endif
+N#elif !defined __KERNEL__
+S#include <sys/types.h>
+N#endif
+N
+N#if defined EMPL_TARGET_MSP430
+X#if 0L
+S#include <USB_Common/types.h>
+N#endif
+N
+N#ifndef __cplusplus
+N#ifndef __KERNEL__
+N#ifndef EMPL_TARGET_UC3L0
+N//typedef int_fast8_t bool;
+N#endif
+N
+N#ifndef false
+N#define false 0
+N#endif
+N
+N#ifndef true
+N#define true 1
+N#endif
+N
+N#endif
+N#endif
+N
+N/*---------------------------
+N *    ML Defines
+N *--------------------------*/
+N
+N#ifndef NULL
+S#define NULL 0
+N#endif
+N
+N#ifndef __KERNEL__
+N#ifndef ARRAY_SIZE
+N/* Dimension of an array */
+N#define ARRAY_SIZE(array) (sizeof(array)/sizeof((array)[0]))
+N#endif
+N#endif
+N/* - ML Errors. - */
+N#define ERROR_NAME(x)   (#x)
+N#define ERROR_CHECK_FIRST(first, x) \
+N	{ if (INV_SUCCESS == first) first = x; }
+X#define ERROR_CHECK_FIRST(first, x) 	{ if (INV_SUCCESS == first) first = x; }
+N
+N#define INV_SUCCESS                       (0)
+N/* Generic Error code.  Proprietary Error Codes only */
+N#define INV_ERROR_BASE                    (0x20)
+N#define INV_ERROR                         (INV_ERROR_BASE)
+N
+N#ifndef EINVAL
+S#define EINVAL  (22)
+N#endif
+N
+N#ifndef ENOMEM
+S#define ENOMEM  (12)
+N#endif
+N
+N#ifndef EPERM
+N#define EPERM   (1)
+N#endif
+N
+N
+N
+N/* Compatibility and other generic error codes */
+N#define INV_ERROR_INVALID_PARAMETER             (EINVAL)
+N#define INV_ERROR_FEATURE_NOT_ENABLED           (EPERM)
+N#define INV_ERROR_FEATURE_NOT_IMPLEMENTED       (INV_ERROR_BASE + 4)
+N#define INV_ERROR_DMP_NOT_STARTED               (INV_ERROR_BASE + 6)
+N#define INV_ERROR_DMP_STARTED                   (INV_ERROR_BASE + 7)
+N#define INV_ERROR_NOT_OPENED                    (INV_ERROR_BASE + 8)
+N#define INV_ERROR_OPENED                        (INV_ERROR_BASE + 9)
+N#define INV_ERROR_INVALID_MODULE                (ENODEV)
+N#define INV_ERROR_MEMORY_EXAUSTED               (ENOMEM)
+N#define INV_ERROR_DIVIDE_BY_ZERO                (INV_ERROR_BASE + 12)
+N#define INV_ERROR_ASSERTION_FAILURE             (INV_ERROR_BASE + 13)
+N#define INV_ERROR_FILE_OPEN                     (INV_ERROR_BASE + 14)
+N#define INV_ERROR_FILE_READ                     (INV_ERROR_BASE + 15)
+N#define INV_ERROR_FILE_WRITE                    (INV_ERROR_BASE + 16)
+N#define INV_ERROR_INVALID_CONFIGURATION         (INV_ERROR_BASE + 17)
+N#define INV_ERROR_NOT_AUTHORIZED                (INV_ERROR_BASE + 18)
+N
+N/* Serial Communication */
+N#define INV_ERROR_SERIAL_CLOSED                 (INV_ERROR_BASE + 20)
+N#define INV_ERROR_SERIAL_OPEN_ERROR             (INV_ERROR_BASE + 21)
+N#define INV_ERROR_SERIAL_READ                   (INV_ERROR_BASE + 22)
+N#define INV_ERROR_SERIAL_WRITE                  (INV_ERROR_BASE + 23)
+N#define INV_ERROR_SERIAL_DEVICE_NOT_RECOGNIZED  (INV_ERROR_BASE + 24)
+N
+N/* SM = State Machine */
+N#define INV_ERROR_SM_TRANSITION                 (INV_ERROR_BASE + 25)
+N#define INV_ERROR_SM_IMPROPER_STATE             (INV_ERROR_BASE + 26)
+N
+N/* Fifo */
+N#define INV_ERROR_FIFO_OVERFLOW                 (INV_ERROR_BASE + 30)
+N#define INV_ERROR_FIFO_FOOTER                   (INV_ERROR_BASE + 31)
+N#define INV_ERROR_FIFO_READ_COUNT               (INV_ERROR_BASE + 32)
+N#define INV_ERROR_FIFO_READ_DATA                (INV_ERROR_BASE + 33)
+N
+N/* Memory & Registers, Set & Get */
+N#define INV_ERROR_MEMORY_SET                    (INV_ERROR_BASE + 40)
+N
+N#define INV_ERROR_LOG_MEMORY_ERROR              (INV_ERROR_BASE + 50)
+N#define INV_ERROR_LOG_OUTPUT_ERROR              (INV_ERROR_BASE + 51)
+N
+N/* OS interface errors */
+N#define INV_ERROR_OS_BAD_PTR                    (INV_ERROR_BASE + 60)
+N#define INV_ERROR_OS_BAD_HANDLE                 (INV_ERROR_BASE + 61)
+N#define INV_ERROR_OS_CREATE_FAILED              (INV_ERROR_BASE + 62)
+N#define INV_ERROR_OS_LOCK_FAILED                (INV_ERROR_BASE + 63)
+N
+N/* Compass errors */
+N#define INV_ERROR_COMPASS_DATA_OVERFLOW         (INV_ERROR_BASE + 70)
+N#define INV_ERROR_COMPASS_DATA_UNDERFLOW        (INV_ERROR_BASE + 71)
+N#define INV_ERROR_COMPASS_DATA_NOT_READY        (INV_ERROR_BASE + 72)
+N#define INV_ERROR_COMPASS_DATA_ERROR            (INV_ERROR_BASE + 73)
+N
+N/* Load/Store calibration */
+N#define INV_ERROR_CALIBRATION_LOAD              (INV_ERROR_BASE + 75)
+N#define INV_ERROR_CALIBRATION_STORE             (INV_ERROR_BASE + 76)
+N#define INV_ERROR_CALIBRATION_LEN               (INV_ERROR_BASE + 77)
+N#define INV_ERROR_CALIBRATION_CHECKSUM          (INV_ERROR_BASE + 78)
+N
+N/* Accel errors */
+N#define INV_ERROR_ACCEL_DATA_OVERFLOW           (INV_ERROR_BASE + 79)
+N#define INV_ERROR_ACCEL_DATA_UNDERFLOW          (INV_ERROR_BASE + 80)
+N#define INV_ERROR_ACCEL_DATA_NOT_READY          (INV_ERROR_BASE + 81)
+N#define INV_ERROR_ACCEL_DATA_ERROR              (INV_ERROR_BASE + 82)
+N
+N/* No Motion Warning States */
+N#define INV_WARNING_MOTION_RACE                 (INV_ERROR_BASE + 83)
+N#define INV_WARNING_QUAT_TRASHED                (INV_ERROR_BASE + 84)
+N#define INV_WARNING_GYRO_MAG                    (INV_ERROR_BASE + 85)
+N
+N#define INV_WARNING_SEMAPHORE_TIMEOUT           (INV_ERROR_BASE + 86)
+N
+N
+N/* For Linux coding compliance */
+N#ifndef __KERNEL__
+N#define EXPORT_SYMBOL(x)
+N#endif
+N
+N#endif				/* MLTYPES_H */
+L 11 "..\DMP\mllite\ml_math_func.h" 2
+N
+N#define GYRO_MAG_SQR_SHIFT 6
+N#define NUM_ROTATION_MATRIX_ELEMENTS (9)
+N#define ROT_MATRIX_SCALE_LONG  (1073741824L)
+N#define ROT_MATRIX_SCALE_FLOAT (1073741824.0f)
+N#define ROT_MATRIX_LONG_TO_FLOAT( longval ) \
+N    ((float) ((longval) / ROT_MATRIX_SCALE_FLOAT ))
+X#define ROT_MATRIX_LONG_TO_FLOAT( longval )     ((float) ((longval) / ROT_MATRIX_SCALE_FLOAT ))
+N#define SIGNM(k)((int)(k)&1?-1:1)
+N#define SIGNSET(x) ((x) ? -1 : +1)
+N
+N#define INV_TWO_POWER_NEG_30 9.313225746154785e-010f
+N
+N#ifdef __cplusplus
+Sextern "C" {
+N#endif
+N
+N     typedef struct {
+N        float state[4];
+N        float c[5];
+N        float input;
+N        float output;
+N    }   inv_biquad_filter_t;
+N
+N    static inline float inv_q30_to_float(long q30)
+N    {
+N        return (float) q30 / ((float)(1L << 30));
+N    }
+N
+N    static inline double inv_q30_to_double(long q30)
+N    {
+N        return (double) q30 / ((double)(1L << 30));
+N    }
+N
+N    static inline float inv_q16_to_float(long q16)
+N    {
+N        return (float) q16 / (1L << 16);
+N    }
+N
+N    static inline double inv_q16_to_double(long q16)
+N    {
+N        return (double) q16 / (1L << 16);
+N    }
+N
+N
+N
+N
+N    long inv_q29_mult(long a, long b);
+N    long inv_q30_mult(long a, long b);
+N
+N    /* UMPL_ELIMINATE_64BIT Notes:
+N     * An alternate implementation using float instead of long long accudoublemulators
+N     * is provided for q29_mult and q30_mult.
+N     * When long long accumulators are used and an alternate implementation is not
+N     * available, we eliminate the entire function and header with a macro.
+N     */
+N#ifndef UMPL_ELIMINATE_64BIT
+N    long inv_q30_div(long a, long b);
+N    long inv_q_shift_mult(long a, long b, int shift);
+N#endif
+N
+N    void inv_q_mult(const long *q1, const long *q2, long *qProd);
+N    void inv_q_add(long *q1, long *q2, long *qSum);
+N    void inv_q_normalize(long *q);
+N    void inv_q_invert(const long *q, long *qInverted);
+N    void inv_q_multf(const float *q1, const float *q2, float *qProd);
+N    void inv_q_addf(const float *q1, const float *q2, float *qSum);
+N    void inv_q_normalizef(float *q);
+N    void inv_q_norm4(float *q);
+N    void inv_q_invertf(const float *q, float *qInverted);
+N    void inv_quaternion_to_rotation(const long *quat, long *rot);
+N    unsigned char *inv_int32_to_big8(long x, unsigned char *big8);
+N    long inv_big8_to_int32(const unsigned char *big8);
+N    short inv_big8_to_int16(const unsigned char *big8);
+N    short inv_little8_to_int16(const unsigned char *little8);
+N    unsigned char *inv_int16_to_big8(short x, unsigned char *big8);
+N    float inv_matrix_det(float *p, int *n);
+N    void inv_matrix_det_inc(float *a, float *b, int *n, int x, int y);
+N    double inv_matrix_detd(double *p, int *n);
+N    void inv_matrix_det_incd(double *a, double *b, int *n, int x, int y);
+N    float inv_wrap_angle(float ang);
+N    float inv_angle_diff(float ang1, float ang2);
+N    void inv_quaternion_to_rotation_vector(const long *quat, long *rot);
+N    unsigned short inv_orientation_matrix_to_scalar(const signed char *mtx);
+N    void inv_convert_to_body(unsigned short orientation, const long *input, long *output);
+N    void inv_convert_to_chip(unsigned short orientation, const long *input, long *output);
+N    void inv_convert_to_body_with_scale(unsigned short orientation, long sensitivity, const long *input, long *output);
+N    void inv_q_rotate(const long *q, const long *in, long *out);
+N	void inv_vector_normalize(long *vec, int length);
+N    uint32_t inv_checksum(const unsigned char *str, int len);
+N    float inv_compass_angle(const long *compass, const long *grav,
+N                            const long *quat);
+N    unsigned long inv_get_gyro_sum_of_sqr(const long *gyro);
+N
+N#ifdef EMPL
+N    float inv_sinf(float x);
+N    float inv_cosf(float x);
+N    /* eMPL timestamps are assumed to be in milliseconds. */
+N    static inline long inv_delta_time_ms(inv_time_t t1, inv_time_t t2)
+N    {
+N        return (long)((t1 - t2));
+N    }
+N#else
+S    static inline long inv_delta_time_ms(inv_time_t t1, inv_time_t t2)
+S    {
+S        return (long)((t1 - t2) / 1000000L);
+S    }
+N#endif
+N
+N    double quaternion_to_rotation_angle(const long *quat);
+N    double inv_vector_norm(const float *x);
+N
+N    void inv_init_biquad_filter(inv_biquad_filter_t *pFilter, float *pBiquadCoeff);
+N    float inv_biquad_filter_process(inv_biquad_filter_t *pFilter, float input);
+N    void inv_calc_state_to_match_output(inv_biquad_filter_t *pFilter, float input);
+N    void inv_get_cross_product_vec(float *cgcross, float compass[3], float grav[3]);
+N
+N    void mlMatrixVectorMult(long matrix[9], const long vecIn[3], long *vecOut);
+N
+N#ifdef __cplusplus
+S}
+N#endif
+N#endif // INVENSENSE_INV_MATH_FUNC_H__
+N
+L 26 "..\DMP\mllite\ml_math_func.c" 2
+N#include "mlinclude.h"
+L 1 "..\DMP\driver\include\mlinclude.h" 1
+N/*
+N $License:
+N    Copyright (C) 2011 InvenSense Corporation, All Rights Reserved.
+N $
+N */
+N#ifndef INV_INCLUDE_H__
+N#define INV_INCLUDE_H__
+N
+N#define INVENSENSE_FUNC_START  typedef int invensensePutFunctionCallsHere
+N
+N#ifdef COVERAGE
+S#include "utestCommon.h"
+N#endif
+N#ifdef PROFILE
+S#include "profile.h"
+N#endif
+N
+N#ifdef WIN32
+S#ifdef COVERAGE
+S
+Sextern int functionEnterLog(const char *file, const char *func);
+Sextern int functionExitLog(const char *file, const char *func);
+S
+S#undef INVENSENSE_FUNC_START
+S#define INVENSENSE_FUNC_START  __pragma(message(__FILE__ "|"__FUNCTION__ )) \
+S    int dslkQjDsd = functionEnterLog(__FILE__, __FUNCTION__)
+X#define INVENSENSE_FUNC_START  __pragma(message(__FILE__ "|"__FUNCTION__ ))     int dslkQjDsd = functionEnterLog(__FILE__, __FUNCTION__)
+S#endif // COVERAGE
+N#endif // WIN32
+N
+N#ifdef PROFILE
+S#undef INVENSENSE_FUNC_START
+S#define INVENSENSE_FUNC_START int dslkQjDsd = profileEnter(__FILE__, __FUNCTION__)
+S#define return if ( profileExit(__FILE__, __FUNCTION__) ) return
+N#endif // PROFILE
+N
+N// #define return if ( functionExitLog(__FILE__, __FUNCTION__) ) return
+N
+N#endif //INV_INCLUDE_H__
+L 27 "..\DMP\mllite\ml_math_func.c" 2
+N#include <string.h>
+N
+N#ifdef EMPL
+N#define TABLE_SIZE (256)
+N
+N/* TODO: If memory becomes a big issue, we can just store the data for a single
+N * quadrant and transform the inputs and outputs of the lookup functions.
+N */
+Nconst float sin_lookup[TABLE_SIZE] = {
+Xconst float sin_lookup[(256)] = {
+N    0.000000f, 0.024541f, 0.049068f, 0.073565f, 0.098017f, 0.122411f, 0.146730f, 0.170962f,
+N    0.195090f, 0.219101f, 0.242980f, 0.266713f, 0.290285f, 0.313682f, 0.336890f, 0.359895f,
+N    0.382683f, 0.405241f, 0.427555f, 0.449611f, 0.471397f, 0.492898f, 0.514103f, 0.534998f,
+N    0.555570f, 0.575808f, 0.595699f, 0.615232f, 0.634393f, 0.653173f, 0.671559f, 0.689541f,
+N    0.707107f, 0.724247f, 0.740951f, 0.757209f, 0.773010f, 0.788346f, 0.803208f, 0.817585f,
+N    0.831470f, 0.844854f, 0.857729f, 0.870087f, 0.881921f, 0.893224f, 0.903989f, 0.914210f,
+N    0.923880f, 0.932993f, 0.941544f, 0.949528f, 0.956940f, 0.963776f, 0.970031f, 0.975702f,
+N    0.980785f, 0.985278f, 0.989177f, 0.992480f, 0.995185f, 0.997290f, 0.998795f, 0.999699f,
+N    1.000000f, 0.999699f, 0.998795f, 0.997290f, 0.995185f, 0.992480f, 0.989177f, 0.985278f,
+N    0.980785f, 0.975702f, 0.970031f, 0.963776f, 0.956940f, 0.949528f, 0.941544f, 0.932993f,
+N    0.923880f, 0.914210f, 0.903989f, 0.893224f, 0.881921f, 0.870087f, 0.857729f, 0.844854f,
+N    0.831470f, 0.817585f, 0.803208f, 0.788346f, 0.773010f, 0.757209f, 0.740951f, 0.724247f,
+N    0.707107f, 0.689541f, 0.671559f, 0.653173f, 0.634393f, 0.615232f, 0.595699f, 0.575808f,
+N    0.555570f, 0.534998f, 0.514103f, 0.492898f, 0.471397f, 0.449611f, 0.427555f, 0.405241f,
+N    0.382683f, 0.359895f, 0.336890f, 0.313682f, 0.290285f, 0.266713f, 0.242980f, 0.219101f,
+N    0.195091f, 0.170962f, 0.146731f, 0.122411f, 0.098017f, 0.073565f, 0.049068f, 0.024541f,
+N    0.000000f, -0.024541f, -0.049067f, -0.073564f, -0.098017f, -0.122411f, -0.146730f, -0.170962f,
+N    -0.195090f, -0.219101f, -0.242980f, -0.266713f, -0.290284f, -0.313682f, -0.336890f, -0.359895f,
+N    -0.382683f, -0.405241f, -0.427555f, -0.449611f, -0.471397f, -0.492898f, -0.514103f, -0.534997f,
+N    -0.555570f, -0.575808f, -0.595699f, -0.615231f, -0.634393f, -0.653173f, -0.671559f, -0.689540f,
+N    -0.707107f, -0.724247f, -0.740951f, -0.757209f, -0.773010f, -0.788346f, -0.803207f, -0.817585f,
+N    -0.831469f, -0.844853f, -0.857729f, -0.870087f, -0.881921f, -0.893224f, -0.903989f, -0.914210f,
+N    -0.923880f, -0.932993f, -0.941544f, -0.949528f, -0.956940f, -0.963776f, -0.970031f, -0.975702f,
+N    -0.980785f, -0.985278f, -0.989176f, -0.992480f, -0.995185f, -0.997290f, -0.998795f, -0.999699f,
+N    -1.000000f, -0.999699f, -0.998795f, -0.997290f, -0.995185f, -0.992480f, -0.989177f, -0.985278f,
+N    -0.980785f, -0.975702f, -0.970031f, -0.963776f, -0.956940f, -0.949528f, -0.941544f, -0.932993f,
+N    -0.923880f, -0.914210f, -0.903989f, -0.893224f, -0.881921f, -0.870087f, -0.857729f, -0.844854f,
+N    -0.831470f, -0.817585f, -0.803208f, -0.788347f, -0.773011f, -0.757209f, -0.740951f, -0.724247f,
+N    -0.707107f, -0.689541f, -0.671559f, -0.653173f, -0.634394f, -0.615232f, -0.595699f, -0.575808f,
+N    -0.555570f, -0.534998f, -0.514103f, -0.492898f, -0.471397f, -0.449612f, -0.427555f, -0.405241f,
+N    -0.382684f, -0.359895f, -0.336890f, -0.313682f, -0.290285f, -0.266713f, -0.242981f, -0.219102f,
+N    -0.195091f, -0.170962f, -0.146731f, -0.122411f, -0.098017f, -0.073565f, -0.049068f, -0.024542f
+N};
+N
+Nfloat inv_sinf(float x)
+N{
+N    int index = (unsigned int)((x * (TABLE_SIZE>>1)) / 3.14159f) % TABLE_SIZE;
+X    int index = (unsigned int)((x * ((256)>>1)) / 3.14159f) % (256);
+N    return sin_lookup[index];
+N}
+N
+Nfloat inv_cosf(float x)
+N{
+N    int index = ((unsigned int)((x * (TABLE_SIZE>>1)) / 3.14159f) + (TABLE_SIZE>>2)) % TABLE_SIZE;
+X    int index = ((unsigned int)((x * ((256)>>1)) / 3.14159f) + ((256)>>2)) % (256);
+N    return sin_lookup[index];
+N}
+N#endif
+N
+N/** @internal
+N * Does the cross product of compass by gravity, then converts that
+N * to the world frame using the quaternion, then computes the angle that
+N * is made.
+N *
+N * @param[in] compass Compass Vector (Body Frame), length 3
+N * @param[in] grav Gravity Vector (Body Frame), length 3
+N * @param[in] quat Quaternion, Length 4
+N * @return Angle Cross Product makes after quaternion rotation.
+N */
+Nfloat inv_compass_angle(const long *compass, const long *grav, const long *quat)
+N{
+N    long cgcross[4], q1[4], q2[4], qi[4];
+N    float angW;
+N
+N    // Compass cross Gravity
+N    cgcross[0] = 0L;
+N    cgcross[1] = inv_q30_mult(compass[1], grav[2]) - inv_q30_mult(compass[2], grav[1]);
+N    cgcross[2] = inv_q30_mult(compass[2], grav[0]) - inv_q30_mult(compass[0], grav[2]);
+N    cgcross[3] = inv_q30_mult(compass[0], grav[1]) - inv_q30_mult(compass[1], grav[0]);
+N
+N    // Now convert cross product into world frame
+N    inv_q_mult(quat, cgcross, q1);
+N    inv_q_invert(quat, qi);
+N    inv_q_mult(q1, qi, q2);
+N
+N    // Protect against atan2 of 0,0
+N    if ((q2[2] == 0L) && (q2[1] == 0L))
+N        return 0.f;
+N
+N    // This is the unfiltered heading correction
+N    angW = -atan2f(inv_q30_to_float(q2[2]), inv_q30_to_float(q2[1]));
+N    return angW;
+N}
+N
+N/**
+N *  @brief  The gyro data magnitude squared :
+N *          (1 degree per second)^2 = 2^6 = 2^GYRO_MAG_SQR_SHIFT.
+N * @param[in] gyro Gyro data scaled with 1 dps = 2^16
+N *  @return the computed magnitude squared output of the gyroscope.
+N */
+Nunsigned long inv_get_gyro_sum_of_sqr(const long *gyro)
+N{
+N    unsigned long gmag = 0;
+N    long temp;
+N    int kk;
+N
+N    for (kk = 0; kk < 3; ++kk) {
+N        temp = gyro[kk] >> (16 - (GYRO_MAG_SQR_SHIFT / 2));
+X        temp = gyro[kk] >> (16 - (6 / 2));
+N        gmag += temp * temp;
+N    }
+N
+N    return gmag;
+N}
+N
+N/** Performs a multiply and shift by 29. These are good functions to write in assembly on
+N * with devices with small memory where you want to get rid of the long long which some
+N * assemblers don't handle well
+N * @param[in] a
+N * @param[in] b
+N * @return ((long long)a*b)>>29
+N*/
+Nlong inv_q29_mult(long a, long b)
+N{
+N#ifdef EMPL_NO_64BIT
+S    long result;
+S    result = (long)((float)a * b / (1L << 29));
+S    return result;
+N#else
+N    long long temp;
+N    long result;
+N    temp = (long long)a * b;
+N    result = (long)(temp >> 29);
+N    return result;
+N#endif
+N}
+N
+N/** Performs a multiply and shift by 30. These are good functions to write in assembly on
+N * with devices with small memory where you want to get rid of the long long which some
+N * assemblers don't handle well
+N * @param[in] a
+N * @param[in] b
+N * @return ((long long)a*b)>>30
+N*/
+Nlong inv_q30_mult(long a, long b)
+N{
+N#ifdef EMPL_NO_64BIT
+S    long result;
+S    result = (long)((float)a * b / (1L << 30));
+S    return result;
+N#else
+N    long long temp;
+N    long result;
+N    temp = (long long)a * b;
+N    result = (long)(temp >> 30);
+N    return result;
+N#endif
+N}
+N
+N#ifndef EMPL_NO_64BIT
+Nlong inv_q30_div(long a, long b)
+N{
+N    long long temp;
+N    long result;
+N    temp = (((long long)a) << 30) / b;
+N    result = (long)temp;
+N    return result;
+N}
+N#endif
+N
+N/** Performs a multiply and shift by shift. These are good functions to write
+N * in assembly on with devices with small memory where you want to get rid of
+N * the long long which some assemblers don't handle well
+N * @param[in] a First multicand
+N * @param[in] b Second multicand
+N * @param[in] shift Shift amount after multiplying
+N * @return ((long long)a*b)<<shift
+N*/
+N#ifndef EMPL_NO_64BIT
+Nlong inv_q_shift_mult(long a, long b, int shift)
+N{
+N    long result;
+N    result = (long)(((long long)a * b) >> shift);
+N    return result;
+N}
+N#endif
+N
+N/** Performs a fixed point quaternion multiply.
+N* @param[in] q1 First Quaternion Multicand, length 4. 1.0 scaled
+N*            to 2^30
+N* @param[in] q2 Second Quaternion Multicand, length 4. 1.0 scaled
+N*            to 2^30
+N* @param[out] qProd Product after quaternion multiply. Length 4.
+N*             1.0 scaled to 2^30.
+N*/
+Nvoid inv_q_mult(const long *q1, const long *q2, long *qProd)
+N{
+N    INVENSENSE_FUNC_START;
+X    typedef int invensensePutFunctionCallsHere;
+N    qProd[0] = inv_q30_mult(q1[0], q2[0]) - inv_q30_mult(q1[1], q2[1]) -
+N               inv_q30_mult(q1[2], q2[2]) - inv_q30_mult(q1[3], q2[3]);
+N
+N    qProd[1] = inv_q30_mult(q1[0], q2[1]) + inv_q30_mult(q1[1], q2[0]) +
+N               inv_q30_mult(q1[2], q2[3]) - inv_q30_mult(q1[3], q2[2]);
+N
+N    qProd[2] = inv_q30_mult(q1[0], q2[2]) - inv_q30_mult(q1[1], q2[3]) +
+N               inv_q30_mult(q1[2], q2[0]) + inv_q30_mult(q1[3], q2[1]);
+N
+N    qProd[3] = inv_q30_mult(q1[0], q2[3]) + inv_q30_mult(q1[1], q2[2]) -
+N               inv_q30_mult(q1[2], q2[1]) + inv_q30_mult(q1[3], q2[0]);
+N}
+N
+N/** Performs a fixed point quaternion addition.
+N* @param[in] q1 First Quaternion term, length 4. 1.0 scaled
+N*            to 2^30
+N* @param[in] q2 Second Quaternion term, length 4. 1.0 scaled
+N*            to 2^30
+N* @param[out] qSum Sum after quaternion summation. Length 4.
+N*             1.0 scaled to 2^30.
+N*/
+Nvoid inv_q_add(long *q1, long *q2, long *qSum)
+N{
+N    INVENSENSE_FUNC_START;
+X    typedef int invensensePutFunctionCallsHere;
+N    qSum[0] = q1[0] + q2[0];
+N    qSum[1] = q1[1] + q2[1];
+N    qSum[2] = q1[2] + q2[2];
+N    qSum[3] = q1[3] + q2[3];
+N}
+N
+Nvoid inv_vector_normalize(long *vec, int length)
+N{
+N    INVENSENSE_FUNC_START;
+X    typedef int invensensePutFunctionCallsHere;
+N    double normSF = 0;
+N    int ii;
+N    for (ii = 0; ii < length; ii++) {
+N        normSF +=
+N            inv_q30_to_double(vec[ii]) * inv_q30_to_double(vec[ii]);
+N    }
+N    if (normSF > 0) {
+N        normSF = 1 / sqrt(normSF);
+N        for (ii = 0; ii < length; ii++) {
+N            vec[ii] = (int)((double)vec[ii] * normSF);
+N        }
+N    } else {
+N        vec[0] = 1073741824L;
+N        for (ii = 1; ii < length; ii++) {
+N            vec[ii] = 0;
+N        }
+N    }
+N}
+N
+Nvoid inv_q_normalize(long *q)
+N{
+N    INVENSENSE_FUNC_START;
+X    typedef int invensensePutFunctionCallsHere;
+N    inv_vector_normalize(q, 4);
+N}
+N
+Nvoid inv_q_invert(const long *q, long *qInverted)
+N{
+N    INVENSENSE_FUNC_START;
+X    typedef int invensensePutFunctionCallsHere;
+N    qInverted[0] = q[0];
+N    qInverted[1] = -q[1];
+N    qInverted[2] = -q[2];
+N    qInverted[3] = -q[3];
+N}
+N
+Ndouble quaternion_to_rotation_angle(const long *quat) {
+N    double quat0 = (double )quat[0] / 1073741824;
+N    if (quat0 > 1.0f) {
+N        quat0 = 1.0;
+N    } else if (quat0 < -1.0f) {
+N        quat0 = -1.0;
+N    }
+N
+N    return acos(quat0)*2*180/M_PI;
+X    return acos(quat0)*2*180/3.14159265358979;
+N}
+N
+N/** Rotates a 3-element vector by Rotation defined by Q
+N*/
+Nvoid inv_q_rotate(const long *q, const long *in, long *out)
+N{
+N    long q_temp1[4], q_temp2[4];
+N    long in4[4], out4[4];
+N
+N    // Fixme optimize
+N    in4[0] = 0;
+N    memcpy(&in4[1], in, 3 * sizeof(long));
+N    inv_q_mult(q, in4, q_temp1);
+N    inv_q_invert(q, q_temp2);
+N    inv_q_mult(q_temp1, q_temp2, out4);
+N    memcpy(out, &out4[1], 3 * sizeof(long));
+N}
+N
+Nvoid inv_q_multf(const float *q1, const float *q2, float *qProd)
+N{
+N    INVENSENSE_FUNC_START;
+X    typedef int invensensePutFunctionCallsHere;
+N    qProd[0] =
+N        (q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3]);
+N    qProd[1] =
+N        (q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2]);
+N    qProd[2] =
+N        (q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1]);
+N    qProd[3] =
+N        (q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]);
+N}
+N
+Nvoid inv_q_addf(const float *q1, const float *q2, float *qSum)
+N{
+N    INVENSENSE_FUNC_START;
+X    typedef int invensensePutFunctionCallsHere;
+N    qSum[0] = q1[0] + q2[0];
+N    qSum[1] = q1[1] + q2[1];
+N    qSum[2] = q1[2] + q2[2];
+N    qSum[3] = q1[3] + q2[3];
+N}
+N
+Nvoid inv_q_normalizef(float *q)
+N{
+N    INVENSENSE_FUNC_START;
+X    typedef int invensensePutFunctionCallsHere;
+N    float normSF = 0;
+N    float xHalf = 0;
+N    normSF = (q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+N    if (normSF < 2) {
+N        xHalf = 0.5f * normSF;
+N        normSF = normSF * (1.5f - xHalf * normSF * normSF);
+N        normSF = normSF * (1.5f - xHalf * normSF * normSF);
+N        normSF = normSF * (1.5f - xHalf * normSF * normSF);
+N        normSF = normSF * (1.5f - xHalf * normSF * normSF);
+N        q[0] *= normSF;
+N        q[1] *= normSF;
+N        q[2] *= normSF;
+N        q[3] *= normSF;
+N    } else {
+N        q[0] = 1.0;
+N        q[1] = 0.0;
+N        q[2] = 0.0;
+N        q[3] = 0.0;
+N    }
+N    normSF = (q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+N}
+N
+N/** Performs a length 4 vector normalization with a square root.
+N* @param[in,out] q vector to normalize. Returns [1,0,0,0] is magnitude is zero.
+N*/
+Nvoid inv_q_norm4(float *q)
+N{
+N    float mag;
+N    mag = sqrtf(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+N    if (mag) {
+N        q[0] /= mag;
+N        q[1] /= mag;
+N        q[2] /= mag;
+N        q[3] /= mag;
+N    } else {
+N        q[0] = 1.f;
+N        q[1] = 0.f;
+N        q[2] = 0.f;
+N        q[3] = 0.f;
+N    }
+N}
+N
+Nvoid inv_q_invertf(const float *q, float *qInverted)
+N{
+N    INVENSENSE_FUNC_START;
+X    typedef int invensensePutFunctionCallsHere;
+N    qInverted[0] = q[0];
+N    qInverted[1] = -q[1];
+N    qInverted[2] = -q[2];
+N    qInverted[3] = -q[3];
+N}
+N
+N/**
+N * Converts a quaternion to a rotation matrix.
+N * @param[in] quat 4-element quaternion in fixed point. One is 2^30.
+N * @param[out] rot Rotation matrix in fixed point. One is 2^30. The
+N *             First 3 elements of the rotation matrix, represent
+N *             the first row of the matrix. Rotation matrix multiplied
+N *             by a 3 element column vector transform a vector from Body
+N *             to World.
+N */
+Nvoid inv_quaternion_to_rotation(const long *quat, long *rot)
+N{
+N    rot[0] =
+N        inv_q29_mult(quat[1], quat[1]) + inv_q29_mult(quat[0],
+N                quat[0]) -
+N        1073741824L;
+N    rot[1] =
+N        inv_q29_mult(quat[1], quat[2]) - inv_q29_mult(quat[3], quat[0]);
+N    rot[2] =
+N        inv_q29_mult(quat[1], quat[3]) + inv_q29_mult(quat[2], quat[0]);
+N    rot[3] =
+N        inv_q29_mult(quat[1], quat[2]) + inv_q29_mult(quat[3], quat[0]);
+N    rot[4] =
+N        inv_q29_mult(quat[2], quat[2]) + inv_q29_mult(quat[0],
+N                quat[0]) -
+N        1073741824L;
+N    rot[5] =
+N        inv_q29_mult(quat[2], quat[3]) - inv_q29_mult(quat[1], quat[0]);
+N    rot[6] =
+N        inv_q29_mult(quat[1], quat[3]) - inv_q29_mult(quat[2], quat[0]);
+N    rot[7] =
+N        inv_q29_mult(quat[2], quat[3]) + inv_q29_mult(quat[1], quat[0]);
+N    rot[8] =
+N        inv_q29_mult(quat[3], quat[3]) + inv_q29_mult(quat[0],
+N                quat[0]) -
+N        1073741824L;
+N}
+N
+N/**
+N * Converts a quaternion to a rotation vector. A rotation vector is
+N * a method to represent a 4-element quaternion vector in 3-elements.
+N * To get the quaternion from the 3-elements, The last 3-elements of
+N * the quaternion will be the given rotation vector. The first element
+N * of the quaternion will be the positive value that will be required
+N * to make the magnitude of the quaternion 1.0 or 2^30 in fixed point units.
+N * @param[in] quat 4-element quaternion in fixed point. One is 2^30.
+N * @param[out] rot Rotation vector in fixed point. One is 2^30.
+N */
+Nvoid inv_quaternion_to_rotation_vector(const long *quat, long *rot)
+N{
+N    rot[0] = quat[1];
+N    rot[1] = quat[2];
+N    rot[2] = quat[3];
+N
+N    if (quat[0] < 0.0) {
+N        rot[0] = -rot[0];
+N        rot[1] = -rot[1];
+N        rot[2] = -rot[2];
+N    }
+N}
+N
+N/** Converts a 32-bit long to a big endian byte stream */
+Nunsigned char *inv_int32_to_big8(long x, unsigned char *big8)
+N{
+N    big8[0] = (unsigned char)((x >> 24) & 0xff);
+N    big8[1] = (unsigned char)((x >> 16) & 0xff);
+N    big8[2] = (unsigned char)((x >> 8) & 0xff);
+N    big8[3] = (unsigned char)(x & 0xff);
+N    return big8;
+N}
+N
+N/** Converts a big endian byte stream into a 32-bit long */
+Nlong inv_big8_to_int32(const unsigned char *big8)
+N{
+N    long x;
+N    x = ((long)big8[0] << 24) | ((long)big8[1] << 16) | ((long)big8[2] << 8)
+N        | ((long)big8[3]);
+N    return x;
+N}
+N
+N/** Converts a big endian byte stream into a 16-bit integer (short) */
+Nshort inv_big8_to_int16(const unsigned char *big8)
+N{
+N    short x;
+N    x = ((short)big8[0] << 8) | ((short)big8[1]);
+N    return x;
+N}
+N
+N/** Converts a little endian byte stream into a 16-bit integer (short) */
+Nshort inv_little8_to_int16(const unsigned char *little8)
+N{
+N    short x;
+N    x = ((short)little8[1] << 8) | ((short)little8[0]);
+N    return x;
+N}
+N
+N/** Converts a 16-bit short to a big endian byte stream */
+Nunsigned char *inv_int16_to_big8(short x, unsigned char *big8)
+N{
+N    big8[0] = (unsigned char)((x >> 8) & 0xff);
+N    big8[1] = (unsigned char)(x & 0xff);
+N    return big8;
+N}
+N
+Nvoid inv_matrix_det_inc(float *a, float *b, int *n, int x, int y)
+N{
+N    int k, l, i, j;
+N    for (i = 0, k = 0; i < *n; i++, k++) {
+N        for (j = 0, l = 0; j < *n; j++, l++) {
+N            if (i == x)
+N                i++;
+N            if (j == y)
+N                j++;
+N            *(b + 6 * k + l) = *(a + 6 * i + j);
+N        }
+N    }
+N    *n = *n - 1;
+N}
+N
+Nvoid inv_matrix_det_incd(double *a, double *b, int *n, int x, int y)
+N{
+N    int k, l, i, j;
+N    for (i = 0, k = 0; i < *n; i++, k++) {
+N        for (j = 0, l = 0; j < *n; j++, l++) {
+N            if (i == x)
+N                i++;
+N            if (j == y)
+N                j++;
+N            *(b + 6 * k + l) = *(a + 6 * i + j);
+N        }
+N    }
+N    *n = *n - 1;
+N}
+N
+Nfloat inv_matrix_det(float *p, int *n)
+N{
+N    float d[6][6], sum = 0;
+N    int i, j, m;
+N    m = *n;
+N    if (*n == 2)
+N        return (*p ** (p + 7) - *(p + 1) ** (p + 6));
+N    for (i = 0, j = 0; j < m; j++) {
+N        *n = m;
+N        inv_matrix_det_inc(p, &d[0][0], n, i, j);
+N        sum =
+N            sum + *(p + 6 * i + j) * SIGNM(i +
+N                                            j) *
+X            sum + *(p + 6 * i + j) * ((int)(i + j)&1?-1:1) *
+N            inv_matrix_det(&d[0][0], n);
+N    }
+N
+N    return (sum);
+N}
+N
+Ndouble inv_matrix_detd(double *p, int *n)
+N{
+N    double d[6][6], sum = 0;
+N    int i, j, m;
+N    m = *n;
+N    if (*n == 2)
+N        return (*p ** (p + 7) - *(p + 1) ** (p + 6));
+N    for (i = 0, j = 0; j < m; j++) {
+N        *n = m;
+N        inv_matrix_det_incd(p, &d[0][0], n, i, j);
+N        sum =
+N            sum + *(p + 6 * i + j) * SIGNM(i +
+N                                            j) *
+X            sum + *(p + 6 * i + j) * ((int)(i + j)&1?-1:1) *
+N            inv_matrix_detd(&d[0][0], n);
+N    }
+N
+N    return (sum);
+N}
+N
+N/** Wraps angle from (-M_PI,M_PI]
+N * @param[in] ang Angle in radians to wrap
+N * @return Wrapped angle from (-M_PI,M_PI]
+N */
+Nfloat inv_wrap_angle(float ang)
+N{
+N    if ((double)ang > M_PI)
+X    if ((double)ang > 3.14159265358979)
+N        return ang - 2 * (float)M_PI;
+X        return ang - 2 * (float)3.14159265358979;
+N    else if (ang <= -(float)M_PI)
+X    else if (ang <= -(float)3.14159265358979)
+N        return ang + 2 * (float)M_PI;
+X        return ang + 2 * (float)3.14159265358979;
+N    else
+N        return ang;
+N}
+N
+N/** Finds the minimum angle difference ang1-ang2 such that difference
+N * is between [-M_PI,M_PI]
+N * @param[in] ang1
+N * @param[in] ang2
+N * @return angle difference ang1-ang2
+N */
+Nfloat inv_angle_diff(float ang1, float ang2)
+N{
+N    float d;
+N    ang1 = inv_wrap_angle(ang1);
+N    ang2 = inv_wrap_angle(ang2);
+N    d = ang1 - ang2;
+N    if ((double)d > M_PI)
+X    if ((double)d > 3.14159265358979)
+N        d -= 2 * (float)M_PI;
+X        d -= 2 * (float)3.14159265358979;
+N    else if (d < -(float)M_PI)
+X    else if (d < -(float)3.14159265358979)
+N        d += 2 * (float)M_PI;
+X        d += 2 * (float)3.14159265358979;
+N    return d;
+N}
+N
+N/** bernstein hash, derived from public domain source */
+Nuint32_t inv_checksum(const unsigned char *str, int len)
+N{
+N    uint32_t hash = 5381;
+N    int i, c;
+N
+N    for (i = 0; i < len; i++) {
+N        c = *(str + i);
+N        hash = ((hash << 5) + hash) + c;	/* hash * 33 + c */
+N    }
+N
+N    return hash;
+N}
+N
+Nstatic unsigned short inv_row_2_scale(const signed char *row)
+N{
+N    unsigned short b;
+N
+N    if (row[0] > 0)
+N        b = 0;
+N    else if (row[0] < 0)
+N        b = 4;
+N    else if (row[1] > 0)
+N        b = 1;
+N    else if (row[1] < 0)
+N        b = 5;
+N    else if (row[2] > 0)
+N        b = 2;
+N    else if (row[2] < 0)
+N        b = 6;
+N    else
+N        b = 7;		// error
+N    return b;
+N}
+N
+N
+N/** Converts an orientation matrix made up of 0,+1,and -1 to a scalar representation.
+N* @param[in] mtx Orientation matrix to convert to a scalar.
+N* @return Description of orientation matrix. The lowest 2 bits (0 and 1) represent the column the one is on for the
+N* first row, with the bit number 2 being the sign. The next 2 bits (3 and 4) represent
+N* the column the one is on for the second row with bit number 5 being the sign.
+N* The next 2 bits (6 and 7) represent the column the one is on for the third row with
+N* bit number 8 being the sign. In binary the identity matrix would therefor be:
+N* 010_001_000 or 0x88 in hex.
+N*/
+Nunsigned short inv_orientation_matrix_to_scalar(const signed char *mtx)
+N{
+N
+N    unsigned short scalar;
+N
+N    /*
+N       XYZ  010_001_000 Identity Matrix
+N       XZY  001_010_000
+N       YXZ  010_000_001
+N       YZX  000_010_001
+N       ZXY  001_000_010
+N       ZYX  000_001_010
+N     */
+N
+N    scalar = inv_row_2_scale(mtx);
+N    scalar |= inv_row_2_scale(mtx + 3) << 3;
+N    scalar |= inv_row_2_scale(mtx + 6) << 6;
+N
+N
+N    return scalar;
+N}
+N
+N/** Uses the scalar orientation value to convert from chip frame to body frame
+N* @param[in] orientation A scalar that represent how to go from chip to body frame
+N* @param[in] input Input vector, length 3
+N* @param[out] output Output vector, length 3
+N*/
+Nvoid inv_convert_to_body(unsigned short orientation, const long *input, long *output)
+N{
+N    output[0] = input[orientation      & 0x03] * SIGNSET(orientation & 0x004);
+X    output[0] = input[orientation      & 0x03] * ((orientation & 0x004) ? -1 : +1);
+N    output[1] = input[(orientation>>3) & 0x03] * SIGNSET(orientation & 0x020);
+X    output[1] = input[(orientation>>3) & 0x03] * ((orientation & 0x020) ? -1 : +1);
+N    output[2] = input[(orientation>>6) & 0x03] * SIGNSET(orientation & 0x100);
+X    output[2] = input[(orientation>>6) & 0x03] * ((orientation & 0x100) ? -1 : +1);
+N}
+N
+N/** Uses the scalar orientation value to convert from body frame to chip frame
+N* @param[in] orientation A scalar that represent how to go from chip to body frame
+N* @param[in] input Input vector, length 3
+N* @param[out] output Output vector, length 3
+N*/
+Nvoid inv_convert_to_chip(unsigned short orientation, const long *input, long *output)
+N{
+N    output[orientation & 0x03]      = input[0] * SIGNSET(orientation & 0x004);
+X    output[orientation & 0x03]      = input[0] * ((orientation & 0x004) ? -1 : +1);
+N    output[(orientation>>3) & 0x03] = input[1] * SIGNSET(orientation & 0x020);
+X    output[(orientation>>3) & 0x03] = input[1] * ((orientation & 0x020) ? -1 : +1);
+N    output[(orientation>>6) & 0x03] = input[2] * SIGNSET(orientation & 0x100);
+X    output[(orientation>>6) & 0x03] = input[2] * ((orientation & 0x100) ? -1 : +1);
+N}
+N
+N
+N/** Uses the scalar orientation value to convert from chip frame to body frame and
+N* apply appropriate scaling.
+N* @param[in] orientation A scalar that represent how to go from chip to body frame
+N* @param[in] sensitivity Sensitivity scale
+N* @param[in] input Input vector, length 3
+N* @param[out] output Output vector, length 3
+N*/
+Nvoid inv_convert_to_body_with_scale(unsigned short orientation, long sensitivity, const long *input, long *output)
+N{
+N    output[0] = inv_q30_mult(input[orientation & 0x03] *
+N                             SIGNSET(orientation & 0x004), sensitivity);
+X                             ((orientation & 0x004) ? -1 : +1), sensitivity);
+N    output[1] = inv_q30_mult(input[(orientation>>3) & 0x03] *
+N                             SIGNSET(orientation & 0x020), sensitivity);
+X                             ((orientation & 0x020) ? -1 : +1), sensitivity);
+N    output[2] = inv_q30_mult(input[(orientation>>6) & 0x03] *
+N                             SIGNSET(orientation & 0x100), sensitivity);
+X                             ((orientation & 0x100) ? -1 : +1), sensitivity);
+N}
+N
+N/** find a norm for a vector
+N* @param[in] a vector [3x1]
+N* @param[out] output the norm of the input vector
+N*/
+Ndouble inv_vector_norm(const float *x)
+N{
+N    return sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+N}
+N
+Nvoid inv_init_biquad_filter(inv_biquad_filter_t *pFilter, float *pBiquadCoeff) {
+N    int i;
+N    // initial state to zero
+N    pFilter->state[0] = 0;
+N    pFilter->state[1] = 0;
+N
+N    // set up coefficients
+N    for (i=0; i<5; i++) {
+N        pFilter->c[i] = pBiquadCoeff[i];
+N    }
+N}
+N
+Nvoid inv_calc_state_to_match_output(inv_biquad_filter_t *pFilter, float input)
+N{
+N    pFilter->input = input;
+N    pFilter->output = input;
+N    pFilter->state[0] = input / (1 + pFilter->c[2] + pFilter->c[3]);
+N    pFilter->state[1] = pFilter->state[0];
+N}
+N
+Nfloat inv_biquad_filter_process(inv_biquad_filter_t *pFilter, float input)  {
+N    float stateZero;
+N
+N    pFilter->input = input;
+N    // calculate the new state;
+N    stateZero = pFilter->input - pFilter->c[2]*pFilter->state[0]
+N                               - pFilter->c[3]*pFilter->state[1];
+N
+N    pFilter->output = stateZero + pFilter->c[0]*pFilter->state[0]
+N                                + pFilter->c[1]*pFilter->state[1];
+N
+N    // update the output and state
+N    pFilter->output = pFilter->output * pFilter->c[4];
+N    pFilter->state[1] = pFilter->state[0];
+N    pFilter->state[0] = stateZero;
+N    return pFilter->output;
+N}
+N
+Nvoid inv_get_cross_product_vec(float *cgcross, float compass[3], float grav[3])  {
+N
+N    cgcross[0] = (float)compass[1] * grav[2] - (float)compass[2] * grav[1];
+N    cgcross[1] = (float)compass[2] * grav[0] - (float)compass[0] * grav[2];
+N    cgcross[2] = (float)compass[0] * grav[1] - (float)compass[1] * grav[0];
+N}
+N
+Nvoid mlMatrixVectorMult(long matrix[9], const long vecIn[3], long *vecOut)  {
+N        // matrix format
+N        //  [ 0  3  6;
+N        //    1  4  7;
+N        //    2  5  8]
+N
+N        // vector format:  [0  1  2]^T;
+N        int i, j;
+N        long temp;
+N
+N        for (i=0; i<3; i++)	{
+N                temp = 0;
+N                for (j=0; j<3; j++)  {
+N                        temp += inv_q30_mult(matrix[i+j*3], vecIn[j]);
+N                }
+N                vecOut[i] = temp;
+N        }
+N}
+N
+N
+N/**
+N * @}
+N */
